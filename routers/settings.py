@@ -103,17 +103,23 @@ async def test_connection(data: TestConnectionIn):
             base_url=data.base_url,
             model=data.model,
         )
-        result = await svc.chat(
-            messages=[{"role": "user", "content": "Reply with exactly: OK"}],
-            temperature=0,
-            max_tokens=10,
-        )
 
-        # Nếu kết nối thành công, fetch danh sách models
+        # 1. Luôn thử GET /models để verify connectivity + load models
         models = await svc.list_models()
+
+        # 2. Nếu có model name, thử chat test
+        response_text = ""
+        if data.model:
+            result = await svc.chat(
+                messages=[{"role": "user", "content": "Reply with exactly: OK"}],
+                temperature=0,
+                max_tokens=10,
+            )
+            response_text = result.strip()
+
+        # Xác định suggested model
         suggested = ""
         if models:
-            # Ưu tiên model của preset
             preset_model = AIService.PROVIDER_PRESETS.get(data.provider, {}).get("model", "")
             if preset_model and any(m["id"] == preset_model for m in models):
                 suggested = preset_model
@@ -122,7 +128,7 @@ async def test_connection(data: TestConnectionIn):
 
         return TestConnectionOut(
             status="success",
-            response=result.strip(),
+            response=response_text,
             models=models[:100],  # Max 100 models
             suggested_model=suggested,
         )

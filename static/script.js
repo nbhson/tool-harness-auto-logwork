@@ -408,7 +408,7 @@
       provider: document.getElementById("setting-ai-provider").value,
       api_key: document.getElementById("setting-ai-api-key").value,
       base_url: document.getElementById("setting-ai-base-url").value,
-      model: document.getElementById("setting-ai-model").value || "test",
+      model: document.getElementById("setting-ai-model").value,
     };
 
     if (!data.api_key) {
@@ -422,7 +422,11 @@
     try {
       const res = await testConnection(data);
       if (res.status === "success") {
-        result.textContent = `✅ Connected! Response: "${res.response}"`;
+        // Build status message — chat test optional, models list is the key
+        const connMsg = res.models && res.models.length > 0
+          ? `✅ Connected! Found ${res.models.length} models`
+          : `✅ Connected!${res.response ? ` Response: "${res.response}"` : ""}`;
+        result.textContent = connMsg;
         result.style.color = "#28a745";
 
         // Populate model dropdown if available
