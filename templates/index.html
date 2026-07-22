@@ -300,6 +300,12 @@
             </small>
           </div>
 
+          <!-- Test connection — sớm để load models trước khi chọn model -->
+          <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px">
+            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
+            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
+          </div>
+
           <!-- Base URL -->
           <div class="form-group">
             <label>Base URL</label>
@@ -310,16 +316,10 @@
           <div class="form-group" id="model-field-group">
             <label>Model</label>
             <div id="model-input-wrapper">
-              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (click Test Connection để tải danh sách)" />
+              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (Test Connection để load danh sách)" />
             </div>
             <small id="ai-model-hint" style="color:var(--text-secondary);font-size:11px"></small>
             <div id="model-load-status" style="font-size:12px;margin-top:4px"></div>
-          </div>
-
-          <!-- Test connection -->
-          <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px">
-            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
-            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
           </div>
         </div>
         <div class="modal-footer">
