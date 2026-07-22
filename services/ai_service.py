@@ -222,7 +222,6 @@ class AIService:
         prompt = f"""You are a professional work log assistant. Given a raw work entry, provide:
 - enhanced_description: a professional 1-3 sentence description (write what was done, context, impact)
 - estimated_minutes: reasonable time estimate as integer (5-480)
-- title (optional): slightly improve the title if unclear, keep original otherwise
 - confidence: float 0.0-1.0 how confident you are
 - reasoning: brief one-sentence explanation
 
@@ -239,7 +238,9 @@ Return ONLY valid JSON."""
             response_json=True,
         )
         try:
-            return json.loads(raw)
+            result = json.loads(raw)
+            result["title"] = title  # always keep original title
+            return result
         except json.JSONDecodeError:
             return {
                 "enhanced_description": description or title,

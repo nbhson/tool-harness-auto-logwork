@@ -297,7 +297,7 @@ async def enhance_single(log_id: int, db: Session = Depends(get_db)):
         log_id=log_id,
         enhanced_description=result.get("enhanced_description", log.description or ""),
         estimated_minutes=result.get("estimated_minutes", 0),
-        title=result.get("title", log.title),
+        title=log.title,
         confidence=conf,
         reasoning=result.get("reasoning", ""),
     )
@@ -342,7 +342,7 @@ async def enhance_batch(
                 log_id=log.id,
                 enhanced_description=result.get("enhanced_description", log.description or ""),
                 estimated_minutes=result.get("estimated_minutes", 0),
-                title=result.get("title", log.title),
+                title=log.title,
                 confidence=conf,
                 reasoning=result.get("reasoning", ""),
             )
