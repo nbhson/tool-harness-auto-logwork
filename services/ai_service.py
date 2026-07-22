@@ -105,6 +105,7 @@ class AIService:
             "messages": full,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "stream": False,
         }
         if response_json:
             payload["response_format"] = {"type": "json_object"}
