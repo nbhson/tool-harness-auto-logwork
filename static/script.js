@@ -169,6 +169,22 @@
     }
   }
 
+  // ─── Panel toggles ───────────────────────────────
+
+  function toggleFilterPanel() {
+    const panel = document.getElementById("filter-panel");
+    const toggle = document.getElementById("filter-toggle");
+    panel.classList.toggle("collapsed");
+    toggle.textContent = panel.classList.contains("collapsed") ? "▶" : "▼";
+  }
+
+  function toggleAIPanel() {
+    const panel = document.getElementById("ai-toolbar");
+    const toggle = document.getElementById("ai-toggle");
+    panel.classList.toggle("collapsed");
+    toggle.textContent = panel.classList.contains("collapsed") ? "▶" : "▼";
+  }
+
   // ─── API calls ─────────────────────────────────────
 
   async function fetchLogs() {
@@ -736,12 +752,12 @@
         <td><span class="${badgeClass(log.source)}">${log.source}</span></td>
         <td><span class="activity-badge">${activityTypeLabel(log.activity_type)}</span></td>
         <td class="cell-title">
-          ${log.url ? `<a href="${log.url}" target="_blank">${escapeHtml(log.title)}</a>` : escapeHtml(log.title)}
+          ${log.url ? `<a href="${log.url}" target="_blank" title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</a>` : `<span title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</span>`}
           ${log.description ? `<div class="cell-desc" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>` : ""}
         </td>
         <td>${escapeHtml(log.project || "-")}</td>
         <td class="cell-date">${formatDate(log.activity_timestamp)}</td>
-        <td class="cell-time">${formatTime(log.time_spent_minutes)}</td>
+        <td class="cell-time${log.time_spent_minutes ? ' has-value' : ''}">${formatTime(log.time_spent_minutes)}</td>
         <td>${log.external_id ? `<code style="font-size:11px;color:var(--text-secondary)">${escapeHtml(log.external_id.substring(0, 30))}</code>` : "-"}</td>
         <td class="cell-actions">
           ${state.aiEnabled ? `<button class="btn btn-sm btn-ai" onclick="handleClassifySingle(${log.id})" title="AI Classify">✨</button>
@@ -1003,6 +1019,8 @@
   window.generateSummary = generateSummary;
   window.toggleChatPanel = toggleChatPanel;
   window.sendChatMessage = sendChatMessage;
+  window.toggleFilterPanel = toggleFilterPanel;
+  window.toggleAIPanel = toggleAIPanel;
 
   // ─── Init ──────────────────────────────────────────
 
