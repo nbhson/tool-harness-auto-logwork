@@ -1,326 +1,479 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work Log Harness</title>
 
-  <!-- Bootstrap 5 + Icons -->
+  <!-- Inter + Bootstrap -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
 
-  <link href="/static/style.css" rel="stylesheet" />
+  <link href="/static/style.css?v=795e9eb" rel="stylesheet" />
 </head>
 <body>
 
-<div class="d-flex">
-  <!-- ═══ Sidebar ═══════════════════════════════════ -->
-  <aside class="app-sidebar">
-    <div class="brand d-flex align-items-center gap-2">
-      <span style="font-size:28px">🤖</span>
-      <div>
-        <h5>Work Log</h5>
+<div class="app-layout">
+
+  <!-- ════════════════ Sidebar ═════════════════════ -->
+  <aside class="app-sidebar" id="app-sidebar" data-expanded="false">
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">H</div>
+      <div class="sidebar-brand-text">
+        <h6>Work Log</h6>
         <small>Harness Dashboard</small>
       </div>
     </div>
-    <nav class="flex-column mt-2">
-      <a class="nav-link active" href="#"><i class="bi bi-grid-fill"></i> Dashboard</a>
-      <a class="nav-link" href="#" onclick="document.getElementById('btn-add-manual').click()"><i class="bi bi-plus-circle"></i> Add Entry</a>
-      <a class="nav-link" href="#" onclick="window.__refreshPage()"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
-      <a class="nav-link" href="#" onclick="openSettingsModal()"><i class="bi bi-gear"></i> Settings</a>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-item active" title="Dashboard" onclick="document.getElementById('btn-refresh').click()">
+        <i class="bi bi-grid-fill"></i>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="sidebar-nav-item" title="Add Entry" onclick="openManualModal()">
+        <i class="bi bi-plus-circle"></i>
+        <span class="nav-label">Add Entry</span>
+      </button>
+      <button class="sidebar-nav-item" title="Refresh" onclick="window.__refreshPage()">
+        <i class="bi bi-arrow-clockwise"></i>
+        <span class="nav-label">Refresh</span>
+      </button>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Sources</div>
+
+      <button class="sidebar-nav-item" title="GitHub" onclick="filterBySource('github')">
+        <i class="bi bi-github"></i>
+        <span class="nav-label">GitHub</span>
+      </button>
+      <button class="sidebar-nav-item" title="Jira" onclick="filterBySource('jira')">
+        <i class="bi bi-at"></i>
+        <span class="nav-label">Jira</span>
+      </button>
+      <button class="sidebar-nav-item" title="Bitbucket" onclick="filterBySource('bitbucket')">
+        <i class="bi bi-gitlab"></i>
+        <span class="nav-label">Bitbucket</span>
+      </button>
+      <button class="sidebar-nav-item" title="Manual" onclick="filterBySource('manual')">
+        <i class="bi bi-pencil-square"></i>
+        <span class="nav-label">Manual</span>
+      </button>
+
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-section-label">Tools</div>
+
+      <button class="sidebar-nav-item" title="AI Harness" onclick="toggleAIPanel(); document.querySelector('.ai-panel')?.scrollIntoView({behavior:'smooth',block:'start'})">
+        <i class="bi bi-stars"></i>
+        <span class="nav-label">AI Harness</span>
+      </button>
+      <button class="sidebar-nav-item" title="Settings" onclick="openSettingsModal()">
+        <i class="bi bi-gear"></i>
+        <span class="nav-label">Settings</span>
+      </button>
     </nav>
+
+    <!-- Footer -->
     <div class="sidebar-footer">
-      <span class="d-flex align-items-center gap-2">
-        <span class="status-dot" style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 6px rgba(52,211,153,0.6);animation:pulse-dot 2s infinite;" id="status-dot"></span>
-        <span id="poller-status">Pollers active</span>
-      </span>
-      <style>@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }</style>
+      <div class="sidebar-user" title="User profile">
+        <div class="sidebar-avatar">SN</div>
+        <div class="sidebar-user-info">
+          <div class="user-name">Sơn Nguyễn</div>
+          <div class="user-role">Developer</div>
+        </div>
+      </div>
     </div>
   </aside>
 
-  <!-- ═══ Main ═══════════════════════════════════════ -->
-  <main class="app-main flex-grow-1">
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- Top Bar -->
-    <div class="app-topbar">
-      <div class="d-flex align-items-center gap-3">
-        <h4><i class="bi bi-grid-fill me-2 text-primary"></i>Dashboard</h4>
-        <span id="ai-enabled-badge" class="ai-badge-glow" style="display:none">✨ AI Active</span>
+  <!-- ════════════════ Main ═════════════════════════ -->
+  <main class="app-main" id="app-main">
+
+    <!-- ═══ Top Bar ═══════════════════════════════ -->
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <button class="topbar-btn d-md-none" onclick="toggleSidebar()" title="Menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <div class="topbar-breadcrumb">
+          <a href="#">Work Log</a>
+          <span>/</span>
+          <span style="color:var(--text-primary);font-weight:500">Dashboard</span>
+        </div>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-light text-dark border px-3 py-2" style="font-weight:400;font-size:12px">
-          <span class="status-dot" style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 6px rgba(52,211,153,0.6);"></span>
-          System Online
+
+      <!-- Command Palette -->
+      <div class="cmd-palette" onclick="openCmdPalette()" title="Search (⌘K)">
+        <i class="bi bi-search"></i>
+        <span>Search work logs, actions...</span>
+        <span class="cmd-hint">
+          <kbd>⌘</kbd>
+          <kbd>K</kbd>
         </span>
-        <button class="btn btn-sm btn-outline-secondary border-0" onclick="window.__refreshPage()" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
-        <button class="btn btn-sm btn-outline-secondary border-0" onclick="openSettingsModal()" title="Settings"><i class="bi bi-gear"></i></button>
       </div>
-    </div>
 
-    <!-- Content -->
+      <div class="topbar-right">
+        <span class="ai-status-badge" id="ai-status-badge">
+          <span class="ai-status-dot"></span>
+          AI Active
+        </span>
+        <button class="topbar-btn" onclick="triggerPoll()" title="Poll Now">
+          <i class="bi bi-arrow-repeat"></i>
+        </button>
+        <button class="topbar-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
+          <i class="bi bi-moon-stars"></i>
+        </button>
+        <button class="topbar-btn" onclick="openSettingsModal()" title="Settings">
+          <i class="bi bi-gear"></i>
+        </button>
+        <div class="topbar-avatar" title="User">SN</div>
+      </div>
+    </header>
+
+    <!-- ═══ Content ════════════════════════════════ -->
     <div class="app-content">
 
-      <!-- Stats -->
-      <div class="row g-2 mb-3" id="stats-row">
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-primary"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label">Total Logs</div><div class="stat-value" id="stat-total">—</div></div>
-              <span class="stat-icon"><i class="bi bi-journal-text"></i></span>
-            </div>
-          </div>
+      <!-- ─── Dashboard Hero ─────────────────────── -->
+      <section class="dashboard-hero">
+        <div class="hero-left">
+          <h1>Developer Work Log</h1>
+          <p>Track development activities across GitHub, Jira, Git, Bitbucket and AI.</p>
         </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-primary"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label">Total Time</div><div class="stat-value" id="stat-time">—</div><small class="text-muted" style="font-size:11px">all time</small></div>
-              <span class="stat-icon"><i class="bi bi-clock-history"></i></span>
-            </div>
-          </div>
+        <div class="hero-right">
+          <button class="hero-btn" onclick="triggerPoll()"><i class="bi bi-arrow-repeat"></i> Sync</button>
+          <button class="hero-btn" id="btn-export-hero" onclick="handleExport('')"><i class="bi bi-download"></i> Export</button>
+          <button class="hero-btn hero-btn-primary" id="btn-add-manual-hero" onclick="openManualModal()"><i class="bi bi-plus-lg"></i> Add Entry</button>
         </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-primary"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label">Today</div><div class="stat-value" id="stat-today">—</div></div>
-              <span class="stat-icon"><i class="bi bi-sun"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-primary"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label">This Week</div><div class="stat-value" id="stat-week">—</div></div>
-              <span class="stat-icon"><i class="bi bi-calendar-week"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-github"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label"><i class="bi bi-github"></i> GitHub</div><div class="stat-value" id="stat-github">—</div></div>
-              <span class="stat-icon"><i class="bi bi-github"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-jira"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label"><i class="bi bi-at"></i> Jira</div><div class="stat-value" id="stat-jira">—</div></div>
-              <span class="stat-icon"><i class="bi bi-at"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-bitbucket"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label"><i class="bi bi-gitlab"></i> Bitbucket</div><div class="stat-value" id="stat-bitbucket">—</div></div>
-              <span class="stat-icon"><i class="bi bi-gitlab"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-git"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label"><i class="bi bi-git"></i> Git</div><div class="stat-value" id="stat-git">—</div></div>
-              <span class="stat-icon"><i class="bi bi-git"></i></span>
-            </div>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg">
-          <div class="stat-card"><div class="stat-bar bar-manual"></div>
-            <div class="d-flex justify-content-between align-items-start">
-              <div><div class="stat-label"><i class="bi bi-pencil-square"></i> Manual</div><div class="stat-value" id="stat-manual">—</div></div>
-              <span class="stat-icon"><i class="bi bi-pencil-square"></i></span>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
 
-      <!-- Filter card -->
-      <div class="card shadow-sm border mb-2">
-        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between" role="button" onclick="toggleFilterPanel()">
-          <span class="fw-semibold fs-sm"><i class="bi bi-funnel me-1"></i> Filters</span>
-          <i class="bi bi-chevron-down" id="filter-toggle" style="transition:transform 0.2s"></i>
+      <!-- ─── Stats Cards ────────────────────────── -->
+      <section class="stats-section">
+        <div class="stats-grid" id="stats-grid">
+          <!-- Total Logs -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-primary"><i class="bi bi-journal-text"></i></div>
+              <span class="stat-trend up" id="stat-trend-total" style="display:none"><i class="bi bi-arrow-up-short"></i><span>0%</span></span>
+            </div>
+            <div class="stat-card-label">Total Logs</div>
+            <div class="stat-card-value" id="stat-total">—</div>
+            <div class="stat-card-sub">all time</div>
+            <div class="stat-sparkline" id="sparkline-total"></div>
+          </div>
+          <!-- Total Time -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-primary"><i class="bi bi-clock-history"></i></div>
+            </div>
+            <div class="stat-card-label">Total Time</div>
+            <div class="stat-card-value" id="stat-time">—</div>
+            <div class="stat-card-sub">all time</div>
+          </div>
+          <!-- Today -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-info"><i class="bi bi-sun"></i></div>
+            </div>
+            <div class="stat-card-label">Today</div>
+            <div class="stat-card-value" id="stat-today">—</div>
+            <div class="stat-card-sub">hours tracked</div>
+          </div>
+          <!-- This Week -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-info"><i class="bi bi-calendar-week"></i></div>
+            </div>
+            <div class="stat-card-label">This Week</div>
+            <div class="stat-card-value" id="stat-week">—</div>
+            <div class="stat-card-sub">hours tracked</div>
+          </div>
+          <!-- GitHub -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-purple"><i class="bi bi-github"></i></div>
+            </div>
+            <div class="stat-card-label">GitHub</div>
+            <div class="stat-card-value" id="stat-github">—</div>
+            <div class="stat-card-sub">entries</div>
+          </div>
+          <!-- Jira -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-blue"><i class="bi bi-at"></i></div>
+            </div>
+            <div class="stat-card-label">Jira</div>
+            <div class="stat-card-value" id="stat-jira">—</div>
+            <div class="stat-card-sub">entries</div>
+          </div>
+          <!-- Bitbucket -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-emerald"><i class="bi bi-gitlab"></i></div>
+            </div>
+            <div class="stat-card-label">Bitbucket</div>
+            <div class="stat-card-value" id="stat-bitbucket">—</div>
+            <div class="stat-card-sub">entries</div>
+          </div>
+          <!-- Git -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-amber"><i class="bi bi-git"></i></div>
+            </div>
+            <div class="stat-card-label">Git</div>
+            <div class="stat-card-value" id="stat-git">—</div>
+            <div class="stat-card-sub">entries</div>
+          </div>
+          <!-- Manual -->
+          <div class="stat-card">
+            <div class="stat-card-top">
+              <div class="stat-card-icon icon-danger"><i class="bi bi-pencil-square"></i></div>
+            </div>
+            <div class="stat-card-label">Manual</div>
+            <div class="stat-card-value" id="stat-manual">—</div>
+            <div class="stat-card-sub">entries</div>
+          </div>
         </div>
-        <div class="card-body" id="filter-body">
+      </section>
+
+      <!-- ─── Filter Toolbar ─────────────────────── -->
+      <section class="filter-toolbar">
+        <div class="filter-row" id="filter-row">
+          <button class="btn-filter-toggle d-md-none" id="btn-filter-toggle" onclick="toggleFilterRow()" title="Toggle filters">
+            <i class="bi bi-funnel"></i>
+          </button>
+          <div class="filter-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="search" id="filter-search" placeholder="Search work logs..." />
+          </div>
+          <div class="filter-divider"></div>
+          <div class="filter-group">
+            <label>Source</label>
+            <select id="filter-source">
+              <option value="">All</option>
+              <option value="jira">Jira</option>
+              <option value="bitbucket">Bitbucket</option>
+              <option value="github">GitHub</option>
+              <option value="git">Git</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Type</label>
+            <select id="filter-type">
+              <option value="">All</option>
+              <option value="ticket_update">Ticket</option>
+              <option value="comment">Comment</option>
+              <option value="commit">Commit</option>
+              <option value="pr_create">PR Create</option>
+              <option value="pr_merge">PR Merge</option>
+              <option value="meeting">Meeting</option>
+              <option value="code_review">Review</option>
+              <option value="research">Research</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>From</label>
+            <input type="date" id="filter-from" />
+          </div>
+          <div class="filter-group">
+            <label>To</label>
+            <input type="date" id="filter-to" />
+          </div>
+          <div class="filter-actions">
+            <button class="hero-btn" onclick="resetFilters()" style="padding:2px 10px"><i class="bi bi-x-lg" style="font-size:11px"></i> Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── AI Panel ───────────────────────────── -->
+      <section class="ai-panel" id="ai-toolbar">
+        <div class="ai-panel-header" onclick="toggleAIPanel()">
+          <div class="ai-panel-header-left">
+            <div class="ai-icon-wrap"><i class="bi bi-stars"></i></div>
+            <div>
+              <h3>AI Harness</h3>
+              <p class="ai-subtitle">Auto-classify, enhance, summarize and analyze work logs</p>
+            </div>
+          </div>
+          <div class="ai-panel-header-right">
+            <span class="ai-status-badge active" id="ai-status-inline" style="display:none">
+              <span class="ai-status-dot"></span> Active
+            </span>
+            <i class="bi bi-chevron-down" id="ai-toggle-icon" style="transition:transform var(--transition-fast);color:var(--text-tertiary)"></i>
+          </div>
+        </div>
+        <div class="ai-panel-body" id="ai-body">
+          <div class="ai-panel-actions">
+            <button class="ai-btn ai-btn-primary" id="btn-ai-classify" onclick="classifyUnclassified()"><i class="bi bi-magic"></i> Auto-Classify</button>
+            <button class="ai-btn ai-btn-primary" id="btn-ai-enhance" onclick="enhanceBatch()"><i class="bi bi-wand"></i> Auto-Enhance</button>
+            <button class="ai-btn" onclick="openSummaryPanel()"><i class="bi bi-file-text"></i> Generate Summary</button>
+            <button class="ai-btn" onclick="toggleChatPanel()"><i class="bi bi-chat-dots"></i> Ask AI</button>
+            <a href="/api/settings" target="_blank" class="ai-btn" style="margin-left:auto"><i class="bi bi-plug"></i> API</a>
+          </div>
+          <div class="ai-status-line">
+            <span class="status-indicator">
+              <i class="bi bi-info-circle"></i>
+              AI-powered analysis for work logs
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Summary Panel ──────────────────────── -->
+      <section class="summary-panel" id="summary-panel">
+        <div class="summary-panel-header">
+          <h3><i class="bi bi-file-text me-1" style="color:var(--color-primary)"></i> AI Summary</h3>
+          <button class="btn-close" onclick="closeSummaryPanel()"></button>
+        </div>
+        <div class="summary-panel-body">
           <div class="row g-2 align-items-end">
             <div class="col-auto">
-              <label class="form-label fs-xs text-muted mb-1">Source</label>
-              <select class="form-select form-select-sm" id="filter-source">
-                <option value="">All</option>
-                <option value="jira">Jira</option>
-                <option value="bitbucket">Bitbucket</option>
-                <option value="github">GitHub</option>
-                <option value="git">Git</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
-            <div class="col-auto">
-              <label class="form-label fs-xs text-muted mb-1">Type</label>
-              <select class="form-select form-select-sm" id="filter-type">
-                <option value="">All</option>
-                <option value="ticket_update">Ticket Update</option>
-                <option value="comment">Comment</option>
-                <option value="estimation_change">Estimation</option>
-                <option value="status_change">Status</option>
-                <option value="commit">Commit</option>
-                <option value="push">Push</option>
-                <option value="pr_create">PR Create</option>
-                <option value="pr_merge">PR Merge</option>
-                <option value="local_commit">Local Commit</option>
-                <option value="meeting">Meeting</option>
-                <option value="code_review">Code Review</option>
-                <option value="research">Research</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="col-auto">
               <label class="form-label fs-xs text-muted mb-1">From</label>
-              <input type="date" class="form-control form-control-sm" id="filter-from" />
+              <input type="date" class="form-control form-control-sm" id="summary-from" />
             </div>
             <div class="col-auto">
               <label class="form-label fs-xs text-muted mb-1">To</label>
-              <input type="date" class="form-control form-control-sm" id="filter-to" />
+              <input type="date" class="form-control form-control-sm" id="summary-to" />
             </div>
-            <div class="col">
-              <label class="form-label fs-xs text-muted mb-1">Search</label>
-              <input type="search" class="form-control form-control-sm" id="filter-search" placeholder="🔍 Search..." />
+            <div class="col-auto d-flex align-items-end">
+              <button class="btn btn-primary btn-sm" onclick="generateSummary()"><i class="bi bi-magic me-1"></i>Generate</button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Action Bar -->
-      <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
-        <button class="btn btn-primary btn-sm" id="btn-add-manual"><i class="bi bi-plus-lg me-1"></i>Add Entry</button>
-        <button class="btn btn-success btn-sm" id="btn-export"><i class="bi bi-download me-1"></i>Export Excel</button>
-        <button class="btn btn-info btn-sm text-white" id="btn-poll-now" onclick="triggerPoll()"><i class="bi bi-arrow-repeat me-1"></i>Poll Now</button>
-        <span class="text-muted mx-1" style="font-size:12px">|</span>
-        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="jira">Jira</button>
-        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="bitbucket">Bitbucket</button>
-        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="github"><i class="bi bi-github"></i> GitHub</button>
-        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="git">Git</button>
-        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="manual">Manual</button>
-      </div>
-
-      <!-- AI Panel -->
-      <div class="card shadow-sm border mb-3" id="ai-toolbar" style="display:none">
-        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between" role="button" onclick="toggleAIPanel()">
-          <span class="fw-semibold fs-sm"><i class="bi bi-stars me-1 text-primary"></i> AI Harness</span>
-          <i class="bi bi-chevron-down" id="ai-toggle" style="transition:transform 0.2s"></i>
-        </div>
-        <div class="card-body py-2" id="ai-body">
-          <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 me-1">AI Tools</span>
-            <button class="btn btn-outline-primary btn-sm" id="btn-ai-classify" onclick="classifyUnclassified()"><i class="bi bi-magic me-1"></i>Auto-Classify</button>
-            <button class="btn btn-outline-primary btn-sm" id="btn-ai-enhance" onclick="enhanceBatch()"><i class="bi bi-wand me-1"></i>Auto-Enhance</button>
-            <button class="btn btn-outline-primary btn-sm" onclick="openSummaryPanel()"><i class="bi bi-file-text me-1"></i>Summary</button>
-            <button class="btn btn-outline-primary btn-sm" onclick="toggleChatPanel()"><i class="bi bi-chat-dots me-1"></i>Ask AI</button>
-            <a href="/api/settings" target="_blank" class="btn btn-sm btn-outline-secondary border-0 ms-auto"><i class="bi bi-plug"></i></a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Summary Panel -->
-      <div class="card shadow-sm border mb-3" id="summary-panel" style="display:none">
-        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
-          <span class="fw-semibold"><i class="bi bi-file-text me-1 text-primary"></i> AI Summary</span>
-          <button class="btn-close" onclick="closeSummaryPanel()"></button>
-        </div>
-        <div class="card-body">
-          <div class="row g-2 mb-2">
-            <div class="col-auto"><label class="form-label fs-xs text-muted mb-1">From</label><input type="date" class="form-control form-control-sm" id="summary-from" /></div>
-            <div class="col-auto"><label class="form-label fs-xs text-muted mb-1">To</label><input type="date" class="form-control form-control-sm" id="summary-to" /></div>
-            <div class="col-auto d-flex align-items-end"><button class="btn btn-primary btn-sm" onclick="generateSummary()"><i class="bi bi-magic me-1"></i>Generate</button></div>
-          </div>
-          <div id="summary-result" class="p-3 bg-light rounded" style="font-size:13px;line-height:1.8;white-space:pre-wrap">
+          <div class="summary-result" id="summary-result">
             <span class="text-muted fst-italic">Select date range and click Generate.</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Chat Panel -->
-      <div class="card shadow-sm border mb-3" id="chat-panel" style="display:none">
-        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
-          <span class="fw-semibold"><i class="bi bi-chat-dots me-1 text-primary"></i> Ask AI</span>
+      <!-- ─── Chat Panel ─────────────────────────── -->
+      <section class="chat-panel" id="chat-panel">
+        <div class="chat-panel-header">
+          <h3><i class="bi bi-chat-dots me-1" style="color:var(--color-primary)"></i> Ask AI</h3>
           <button class="btn-close" onclick="toggleChatPanel()"></button>
         </div>
         <div class="chat-messages" id="chat-messages">
           <div class="chat-msg bot">👋 Ask me anything about your work logs!<br/><small class="text-muted">e.g., <em>"What did I work on yesterday?"</em></small></div>
         </div>
-        <div class="card-footer bg-white py-2">
+        <div class="chat-panel-footer">
           <div class="input-group input-group-sm">
             <input type="text" class="form-control" id="chat-input" placeholder="Ask about your work logs..." />
             <button class="btn btn-primary" id="btn-chat-send"><i class="bi bi-send"></i></button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Table -->
-      <div class="card shadow-sm border">
-        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
-          <span class="text-muted" id="table-info" style="font-size:13px">Loading...</span>
-          <button class="btn btn-sm btn-outline-secondary border-0" onclick="window.__refreshPage()"><i class="bi bi-arrow-clockwise"></i></button>
+      <!-- ─── Table Card ─────────────────────────── -->
+      <section class="table-card">
+        <div class="table-card-header">
+          <span class="table-info" id="table-info">Loading...</span>
+          <div class="table-actions">
+            <button class="hero-btn" onclick="triggerPoll()" style="padding:2px 10px"><i class="bi bi-arrow-repeat"></i> Sync</button>
+            <button class="hero-btn" onclick="window.__refreshPage()" style="padding:2px 10px"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
         </div>
-        <div class="table-responsive">
-          <table class="table table-hover mb-0 align-middle" id="logs-table">
+        <div class="table-wrap">
+          <table class="enterprise-table" id="logs-table">
             <thead>
               <tr>
                 <th data-sort="source">Source <span class="sort-icon">⇅</span></th>
                 <th data-sort="activity_type">Type <span class="sort-icon">⇅</span></th>
-                <th data-sort="title" style="min-width:200px">Title / Description <span class="sort-icon">⇅</span></th>
+                <th data-sort="title" style="min-width:220px">Title / Description <span class="sort-icon">⇅</span></th>
                 <th data-sort="project">Project <span class="sort-icon">⇅</span></th>
                 <th data-sort="activity_timestamp">Date <span class="sort-icon">⇅</span></th>
                 <th data-sort="time_spent_minutes">Time <span class="sort-icon">⇅</span></th>
-                <th>External ID</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="logs-tbody">
-              <tr><td colspan="8"><div class="text-center py-5"><div class="spinner-border text-primary mb-2" role="status"></div><p class="text-muted mb-0">Loading work logs...</p></div></td></tr>
+              <!-- Skeleton rows -->
+              <tr class="skeleton-row"><td colspan="7"><div class="text-center py-5"><div class="spinner-border text-primary mb-2" role="status"></div><p class="text-muted mb-0">Loading work logs...</p></div></td></tr>
             </tbody>
           </table>
         </div>
-        <div class="card-footer bg-white py-2" id="pagination"></div>
-      </div>
+        <div class="table-pagination" id="pagination">
+          <span class="pagination-info"></span>
+        </div>
+      </section>
 
     </div>
   </main>
 </div>
 
-<!-- ═══ Manual Entry Modal ══════════════════════════ -->
+<!-- ════════════════ Command Palette Modal ═════════════ -->
+<div class="cmd-modal-backdrop" id="cmd-backdrop" onclick="closeCmdPalette()"></div>
+<div class="cmd-modal" id="cmd-modal">
+  <div class="cmd-modal-content">
+    <div class="cmd-modal-input-wrap">
+      <i class="bi bi-search"></i>
+      <input type="text" id="cmd-input" placeholder="Search work logs, sources, actions..." autofocus />
+    </div>
+    <div class="cmd-modal-body" id="cmd-body">
+      <div class="cmd-modal-item" onclick="closeCmdPalette();document.getElementById('filter-search').focus()">
+        <i class="bi bi-search"></i> Search work logs
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>K</kbd></span>
+      </div>
+      <div class="cmd-modal-item" onclick="closeCmdPalette();openManualModal()">
+        <i class="bi bi-plus-circle"></i> Add manual entry
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>N</kbd></span>
+      </div>
+      <div class="cmd-modal-item" onclick="closeCmdPalette();openSettingsModal()">
+        <i class="bi bi-gear"></i> Open settings
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>,</kbd></span>
+      </div>
+      <div class="cmd-modal-item" onclick="closeCmdPalette();triggerPoll()">
+        <i class="bi bi-arrow-repeat"></i> Sync all sources
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>⇧</kbd><kbd>R</kbd></span>
+      </div>
+      <div class="cmd-modal-item" onclick="closeCmdPalette();exportNow()">
+        <i class="bi bi-download"></i> Export to Excel
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>E</kbd></span>
+      </div>
+      <div class="cmd-modal-item" onclick="closeCmdPalette();toggleTheme()">
+        <i class="bi bi-moon-stars"></i> Toggle dark mode
+        <span class="cmd-shortcut"><kbd>⌘</kbd><kbd>⌥</kbd><kbd>D</kbd></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ Manual Entry Modal ════════════════ -->
 <div class="modal fade" id="manual-modal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold" id="modal-title">Add Manual Entry</h5>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">Add Manual Entry</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeManualModal()"></button>
       </div>
       <form id="manual-form">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">Title <span class="text-danger">*</span></label>
+            <label class="form-label">Title <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="entry-title" required placeholder="e.g., Sprint planning meeting" />
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">Description</label>
+            <label class="form-label">Description</label>
             <textarea class="form-control" id="entry-desc" rows="3" placeholder="Details about this activity..."></textarea>
           </div>
           <div class="row g-2 mb-3">
-            <div class="col"><label class="form-label fw-semibold fs-sm">Type</label><select class="form-select" id="entry-type"><option value="meeting">Meeting</option><option value="code_review">Code Review</option><option value="research">Research</option><option value="other">Other</option></select></div>
-            <div class="col"><label class="form-label fw-semibold fs-sm">Project</label><input type="text" class="form-control" id="entry-project" placeholder="e.g., PROJ" /></div>
+            <div class="col"><label class="form-label">Type</label><select class="form-select" id="entry-type"><option value="meeting">Meeting</option><option value="code_review">Code Review</option><option value="research">Research</option><option value="other">Other</option></select></div>
+            <div class="col"><label class="form-label">Project</label><input type="text" class="form-control" id="entry-project" placeholder="e.g., PROJ" /></div>
           </div>
           <div class="row g-2 mb-3">
-            <div class="col"><label class="form-label fw-semibold fs-sm">Date &amp; Time</label><input type="datetime-local" class="form-control" id="entry-date" /></div>
-            <div class="col"><label class="form-label fw-semibold fs-sm">URL</label><input type="url" class="form-control" id="entry-url" placeholder="https://..." /></div>
+            <div class="col"><label class="form-label">Date &amp; Time</label><input type="datetime-local" class="form-control" id="entry-date" /></div>
+            <div class="col"><label class="form-label">URL</label><input type="url" class="form-control" id="entry-url" placeholder="https://..." /></div>
           </div>
           <div class="row g-2">
-            <div class="col"><label class="form-label fw-semibold fs-sm">Hours</label><input type="number" class="form-control" id="entry-hours" min="0" max="24" value="0" /></div>
-            <div class="col"><label class="form-label fw-semibold fs-sm">Minutes</label><input type="number" class="form-control" id="entry-minutes" min="0" max="59" value="0" /></div>
+            <div class="col"><label class="form-label">Hours</label><input type="number" class="form-control" id="entry-hours" min="0" max="24" value="0" /></div>
+            <div class="col"><label class="form-label">Minutes</label><input type="number" class="form-control" id="entry-minutes" min="0" max="59" value="0" /></div>
           </div>
         </div>
-        <div class="modal-footer border-top-0 pt-0">
+        <div class="modal-footer">
           <button type="button" class="btn btn-light" id="btn-cancel" onclick="closeManualModal()">Cancel</button>
           <button type="submit" class="btn btn-primary" id="btn-save"><i class="bi bi-save me-1"></i>Save</button>
         </div>
@@ -329,25 +482,25 @@
   </div>
 </div>
 
-<!-- ═══ AI Settings Modal ══════════════════════════ -->
+<!-- ════════════════ Settings Modal ════════════════════ -->
 <div class="modal fade" id="settings-modal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header border-bottom-0 pb-0">
-        <h5 class="modal-title fw-bold"><i class="bi bi-gear me-1"></i> AI Harness Settings</h5>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-gear me-1"></i> AI Harness Settings</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeSettingsModal()"></button>
       </div>
       <form id="settings-form">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">Enable AI Harness</label>
+            <label class="form-label">Enable AI Harness</label>
             <select class="form-select" id="setting-ai-enabled">
-              <option value="true">✅ Enabled — LLM xử lý classify / summary / chat</option>
+              <option value="true">✅ Enabled — LLM processes classify / summary / chat</option>
               <option value="false">⛔ Disabled</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">LLM Provider</label>
+            <label class="form-label">LLM Provider</label>
             <select class="form-select" id="setting-ai-provider" onchange="onProviderChange()">
               <option value="openai">OpenAI</option>
               <option value="gemini">Google Gemini</option>
@@ -356,10 +509,10 @@
               <option value="deepseek">DeepSeek</option>
               <option value="custom">Custom (OpenAI-compatible)</option>
             </select>
-            <small class="text-muted" style="font-size:11px">Gemini có free tier.</small>
+            <small class="text-muted" style="font-size:11px">Gemini has a free tier.</small>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">API Key</label>
+            <label class="form-label">API Key</label>
             <div class="input-group">
               <input type="password" class="form-control" id="setting-ai-api-key" placeholder="sk-... or AIza..." />
               <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()" id="btn-toggle-key"><i class="bi bi-eye"></i></button>
@@ -367,7 +520,7 @@
             <small id="ai-key-hint" class="text-muted" style="font-size:11px"><a href="https://aistudio.google.com/apikey" target="_blank">Get Gemini API Key</a> (free)</small>
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold fs-sm">Base URL</label>
+            <label class="form-label">Base URL</label>
             <input type="url" class="form-control" id="setting-ai-base-url" placeholder="https://api.openai.com/v1" />
           </div>
           <div class="mb-3 pt-2 border-top">
@@ -375,15 +528,15 @@
             <span id="ai-test-result" class="ms-2" style="font-size:13px"></span>
           </div>
           <div class="mb-3" id="model-field-group">
-            <label class="form-label fw-semibold fs-sm">Model</label>
+            <label class="form-label">Model</label>
             <div id="model-input-wrapper">
-              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (Test Connection để load models)" />
+              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (Test Connection to load models)" />
             </div>
             <small id="ai-model-hint" class="text-muted" style="font-size:11px"></small>
             <div id="model-load-status" style="font-size:12px;margin-top:4px"></div>
           </div>
         </div>
-        <div class="modal-footer border-top-0 pt-0">
+        <div class="modal-footer">
           <button type="button" class="btn btn-light" onclick="closeSettingsModal()">Close</button>
           <button type="submit" class="btn btn-primary" id="btn-save-settings"><i class="bi bi-save me-1"></i>Save Settings</button>
         </div>
@@ -392,21 +545,21 @@
   </div>
 </div>
 
-<!-- ═══ Toast Container ══════════════════════════════ -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:9999"></div>
+<!-- ════════════════ Toast Container ══════════════════ -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:1060"></div>
 
-<!-- ═══ Loading Overlay ══════════════════════════════ -->
+<!-- ════════════════ Loading Overlay ═══════════════════ -->
 <div class="loading-overlay" id="loading-overlay">
-  <div class="card shadow-lg">
-    <div class="spinner-border text-primary" role="status"></div>
-    <div class="mt-2 fw-semibold" id="loading-text" style="font-size:14px">Processing...</div>
+  <div class="loading-card">
+    <div class="spinner-border" role="status"></div>
+    <div class="loading-text" id="loading-text">Processing...</div>
   </div>
 </div>
 
-<!-- Bootstrap JS (for modal) -->
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- ═══ App Script ══════════════════════════════════ -->
-<script src="/static/script.js?v=3ede7033"></script>
+<!-- App Script -->
+<script src="/static/script.js?v=795e9eb"></script>
 </body>
 </html>

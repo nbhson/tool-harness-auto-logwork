@@ -1,12 +1,13 @@
 /**
- * Work Log Harness — Frontend (Bootstrap 5)
+ * Work Log Harness — Frontend (Enterprise UI)
  *
  * SPA với:
- * - Bảng work logs (filter, sort, paginate) — Bootstrap table
- * - Modal manual entry + settings — Bootstrap Modal
- * - Export Excel
+ * - Dashboard: sidebar, topbar, hero, stat cards, filters, table
+ * - Modal manual entry + settings
+ * - Export Excel + class action
  * - ✨ AI: classify, enhance, summary, chat
  * - Auto-refresh 30s
+ * - Dark mode, command palette, keyboard shortcuts
  */
 (function () {
   "use strict";
@@ -24,6 +25,7 @@
     sortOrder: "desc",
     total: 0,
     aiEnabled: false,
+    theme: "light",
   };
 
   let editingId = null;
@@ -57,32 +59,119 @@
   const filterSearch = $("#filter-search");
 
   const manualForm = $("#manual-form");
-  const btnAddManual = $("#btn-add-manual");
-  const btnCancel = $("#btn-cancel");
-  const btnExport = $("#btn-export");
-
   const settingsForm = $("#settings-form");
 
   const aiToolbar = $("#ai-toolbar");
-  const aiBadge = $("#ai-enabled-badge");
-  const summaryPanel = $("#summary-panel");
   const chatPanel = $("#chat-panel");
+  const summaryPanel = $("#summary-panel");
 
-  // ─── Helpers ───────────────────────────────────────
+  // ─── Theme ─────────────────────────────────────────
+
+  function loadTheme() {
+    try {
+      state.theme = localStorage.getItem("wlh-theme") || "light";
+    } catch (_) { /* ignore */ }
+    document.documentElement.setAttribute("data-theme", state.theme);
+  }
+
+  function saveTheme() {
+    try { localStorage.setItem("wlh-theme", state.theme); } catch (_) { /* ignore */ }
+  }
+
+  function toggleTheme() {
+    state.theme = state.theme === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", state.theme);
+    saveTheme();
+    const icon = document.querySelector("#theme-toggle-btn i");
+    if (icon) {
+      icon.className = state.theme === "dark" ? "bi bi-sun" : "bi bi-moon-stars";
+    }
+  }
+
+  // ─── Sidebar ───────────────────────────────────────
+
+  function toggleSidebar() {
+    const sidebar = $("#app-sidebar");
+    const overlay = $("#sidebar-overlay");
+    if (!sidebar) return;
+    const expanded = sidebar.getAttribute("data-expanded") === "true";
+    if (window.innerWidth < 768) {
+      // Mobile off-canvas
+      sidebar.style.transform = expanded ? "" : "translateX(0)";
+      sidebar.setAttribute("data-expanded", expanded ? "false" : "true");
+      if (overlay) overlay.classList.toggle("active");
+    } else {
+      // Desktop expand/collapse
+      sidebar.setAttribute("data-expanded", expanded ? "false" : "true");
+    }
+  }
+
+  // ─── Command Palette ───────────────────────────────
+
+  function openCmdPalette() {
+    const backdrop = $("#cmd-backdrop");
+    const modal = $("#cmd-modal");
+    if (!backdrop || !modal) return;
+    backdrop.classList.add("active");
+    modal.classList.add("active");
+    setTimeout(() => {
+      const input = $("#cmd-input");
+      if (input) input.focus();
+    }, 150);
+  }
+
+  function closeCmdPalette() {
+    const backdrop = $("#cmd-backdrop");
+    const modal = $("#cmd-modal");
+    if (backdrop) backdrop.classList.remove("active");
+    if (modal) modal.classList.remove("active");
+  }
+
+  // ─── Filter toggle (mobile) ────────────────────────
+
+  function toggleFilterRow() {
+    const row = $("#filter-row");
+    if (!row) return;
+    row.classList.toggle("open");
+  }
+
+  // ─── Quick filter by source ────────────────────────
+
+  function filterBySource(source) {
+    filterSource.value = source;
+    applyFilters();
+    // Scroll to table on mobile
+    if (window.innerWidth < 768) {
+      $(".table-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  function resetFilters() {
+    filterSource.value = "";
+    filterType.value = "";
+    filterFrom.value = "";
+    filterTo.value = "";
+    filterSearch.value = "";
+    applyFilters();
+  }
+
+  // ─── Toast ─────────────────────────────────────────
 
   function showToast(message, type = "info") {
     const container = $("#toast-container");
     if (!container) return;
     const toast = document.createElement("div");
     toast.className = `toast-custom ${type}`;
-    toast.textContent = message;
+    toast.innerHTML = message;
     container.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = "0";
       toast.style.transition = "opacity 0.3s";
       setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 3500);
   }
+
+  // ─── Formatting helpers ────────────────────────────
 
   function formatDate(isoStr) {
     if (!isoStr) return "";
@@ -122,7 +211,50 @@
     return div.innerHTML;
   }
 
-  // ─── Loading UI helpers ────────────────────────────
+  // ─── Sparkline helper ──────────────────────────────
+
+  function renderSparkline(elemId, data, color = "#4F46E5") {
+    const container = document.getElementById(elemId);
+    if (!container || !data || data.length < 2) return;
+    const w = 120, h = 28;
+    const max = Math.max(...data, 1);
+    const min = Math.min(...data, 0);
+    const range = max - min || 1;
+    const pts = data.map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * (h - 4) - 2;
+      return `${x},${y}`;
+    });
+    const pathD = pts.reduce((acc, p, i) => acc + (i === 0 ? "M" : "L") + p, "");
+    const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="${pathD}" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.8"/>
+      <path d="${pathD}" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.12"/>
+    </svg>`;
+    container.innerHTML = svg;
+  }
+
+  // ─── Animated counter ──────────────────────────────
+
+  function animateCounter(elemId, target, suffix = "") {
+    const el = document.getElementById(elemId);
+    if (!el) return;
+    const start = 0;
+    const duration = 800;
+    const startTime = performance.now();
+
+    function step(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(start + (target - start) * eased);
+      el.textContent = current + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ─── Loading helpers ───────────────────────────────
 
   let _loadingStack = 0;
 
@@ -158,34 +290,23 @@
     const origDisabled = btn.disabled;
     btn.disabled = true;
     btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> ${loadingText}`;
-    btn.classList.add("btn-loading");
     try {
       return await fn();
     } finally {
       btn.disabled = origDisabled;
       btn.innerHTML = origHTML;
-      btn.classList.remove("btn-loading");
     }
   }
 
   // ─── Panel toggles ───────────────────────────────
 
-  function toggleFilterPanel() {
-    const body = document.getElementById("filter-body");
-    const toggle = document.getElementById("filter-toggle");
-    if (!body || !toggle) return;
-    const isHidden = body.classList.contains("d-none");
-    body.classList.toggle("d-none");
-    toggle.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
-  }
-
   function toggleAIPanel() {
-    const body = document.getElementById("ai-body");
-    const toggle = document.getElementById("ai-toggle");
-    if (!body || !toggle) return;
-    const isHidden = body.classList.contains("d-none");
-    body.classList.toggle("d-none");
-    toggle.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+    const body = $("#ai-body");
+    const toggle = $("#ai-toggle-icon");
+    if (!body) return;
+    const isHidden = body.style.display === "none" || body.style.display === "";
+    body.style.display = isHidden ? "block" : "none";
+    if (toggle) toggle.style.transform = isHidden ? "rotate(0deg)" : "rotate(-180deg)";
   }
 
   // ─── API calls ─────────────────────────────────────
@@ -334,7 +455,7 @@
       base_url: "https://api.anthropic.com/v1",
       model: "claude-sonnet-4-20250514",
       key_hint: 'Get key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>',
-      model_hint: `Models: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022`,
+      model_hint: "Models: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022",
     },
     openrouter: {
       base_url: "https://openrouter.ai/api/v1",
@@ -399,28 +520,33 @@
       const data = await fetchSettings();
       const s = data.settings || {};
 
-      document.getElementById("setting-ai-enabled").value = s.ai_enabled || "false";
-      document.getElementById("setting-ai-provider").value = s.ai_provider || "openai";
-      document.getElementById("setting-ai-api-key").value = s.ai_api_key || "";
-      document.getElementById("setting-ai-base-url").value = s.ai_base_url || "";
-      document.getElementById("setting-ai-model").value = s.ai_model || "";
+      const enabledField = document.getElementById("setting-ai-enabled");
+      if (enabledField) enabledField.value = s.ai_enabled || "false";
+      const providerField = document.getElementById("setting-ai-provider");
+      if (providerField) providerField.value = s.ai_provider || "openai";
+      const keyField = document.getElementById("setting-ai-api-key");
+      if (keyField) keyField.value = s.ai_api_key || "";
+      const baseUrlField = document.getElementById("setting-ai-base-url");
+      if (baseUrlField) baseUrlField.value = s.ai_base_url || "";
+      const modelField = document.getElementById("setting-ai-model");
+      if (modelField) modelField.value = s.ai_model || "";
 
       onProviderChange();
 
       state.aiEnabled = s.ai_enabled === "true" && !!s.ai_api_key;
       updateAIUI();
     } catch (err) {
-      console.error("Failed to load settings:", err);
+      console.warn("Settings load deferred (may load later).");
     }
   }
 
   function updateAIUI() {
+    // Keep AI panel visible always — it's part of the layout
+    const inlineBadge = $("#ai-status-inline");
     if (state.aiEnabled) {
-      aiToolbar.style.display = "block";
-      aiBadge.style.display = "inline-block";
+      if (inlineBadge) inlineBadge.style.display = "inline-flex";
     } else {
-      aiToolbar.style.display = "none";
-      aiBadge.style.display = "none";
+      if (inlineBadge) inlineBadge.style.display = "none";
     }
   }
 
@@ -588,7 +714,7 @@
     }
 
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-magic me-1"></i>Auto-Classify';
+    btn.innerHTML = '<i class="bi bi-magic"></i> Auto-Classify';
   }
 
   async function handleEnhanceSingle(logId) {
@@ -615,7 +741,7 @@
       showToast(`❌ ${err.message}`, "error");
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-wand me-1"></i>Auto-Enhance';
+      btn.innerHTML = '<i class="bi bi-wand"></i> Auto-Enhance';
     }
   }
 
@@ -666,7 +792,7 @@
     const container = document.getElementById("chat-messages");
     const msg = document.createElement("div");
     msg.className = `chat-msg ${role}`;
-    msg.textContent = content;
+    msg.innerHTML = content;
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
   }
@@ -699,6 +825,21 @@
 
   // ─── Render ────────────────────────────────────────
 
+  function renderSkeleton() {
+    // Show skeleton rows during loading
+    tableBody.innerHTML = Array.from({ length: 6 }, () => `
+      <tr>
+        <td><div class="skeleton" style="height:16px;width:60px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:70px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:200px"></div><div class="skeleton" style="height:12px;width:140px;margin-top:6px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:80px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:120px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:50px"></div></td>
+        <td><div class="skeleton" style="height:16px;width:40px"></div></td>
+      </tr>
+    `).join("");
+  }
+
   function renderTable(data) {
     const { items, total, page } = data;
     state.total = total;
@@ -706,11 +847,11 @@
     if (!items || items.length === 0) {
       tableBody.innerHTML = `
         <tr>
-          <td colspan="8">
+          <td colspan="7">
             <div class="text-center py-5">
               <div style="font-size:48px;margin-bottom:8px">📋</div>
               <h5 class="fw-semibold">No work logs yet</h5>
-              <p class="text-muted">Configure Jira/Bitbucket in .env or add manual entries.</p>
+              <p class="text-muted" style="font-size:13px">Configure Jira/Bitbucket in .env or add manual entries.</p>
             </div>
           </td>
         </tr>`;
@@ -734,24 +875,35 @@
             : ""}
         </td>
         <td>${escapeHtml(log.project || "-")}</td>
-        <td class="cell-date"><span class="text-muted" style="white-space:nowrap;font-size:12px">${formatDate(log.activity_timestamp)}</span></td>
+        <td class="cell-date">${formatDate(log.activity_timestamp)}</td>
         <td class="cell-time${log.time_spent_minutes ? " has-value" : ""}">${formatTime(log.time_spent_minutes)}</td>
-        <td>${log.external_id ? `<code class="text-muted" style="font-size:11px">${escapeHtml(log.external_id.substring(0, 30))}</code>` : '<span class="text-muted">-</span>'}</td>
-        <td class="text-nowrap" style="white-space:nowrap">
-          ${state.aiEnabled
-            ? `<button class="btn btn-sm btn-ai-classify" onclick="handleClassifySingle(${log.id})" title="AI Classify"><span class="badge rounded-pill bg-white text-primary p-0" style="font-size:12px">✨</span></button>
-               <button class="btn btn-sm btn-ai-enhance" onclick="handleEnhanceSingle(${log.id})" title="AI Enhance"><span class="badge rounded-pill bg-white text-primary p-0" style="font-size:12px">🪄</span></button>`
-            : ""}
-          <button class="btn btn-sm btn-outline-secondary border-0" onclick="handleEdit(${log.id})" title="Edit"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm btn-outline-secondary border-0 text-danger" onclick="handleDelete(${log.id})" title="Delete"><i class="bi bi-trash"></i></button>
+        <td class="cell-actions">
+          <div class="dropdown">
+            <button class="row-action-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Actions"><i class="bi bi-three-dots-vertical"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width:160px;font-size:13px;padding:4px">
+              <li><a class="dropdown-item" href="#" onclick="window.__editLog(${log.id});return false"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+              <li><a class="dropdown-item" href="#" onclick="window.__deleteLog(${log.id});return false"><i class="bi bi-trash me-2"></i>Delete</a></li>
+              ${state.aiEnabled ? `
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="#" onclick="window.__classifySingle(${log.id});return false"><span class="me-2">✨</span>Classify</a></li>
+              <li><a class="dropdown-item" href="#" onclick="window.__enhanceSingle(${log.id});return false"><span class="me-2">🪄</span>Enhance</a></li>
+              ` : ""}
+            </ul>
+          </div>
         </td>
       </tr>`
       )
       .join("");
 
-    const start = (page - 1) * state.pageSize + 1;
+    // Initialize Bootstrap dropdowns for dynamic rows
+    tableBody.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(el => {
+      try { new bootstrap.Dropdown(el); } catch (_) {}
+    });
+
+    const start = Math.min((page - 1) * state.pageSize + 1, total);
     const end = Math.min(page * state.pageSize, total);
-    tableInfo.textContent = `Showing ${start}-${end} of ${total} entries`;
+    const showPlural = total !== 1 ? "entries" : "entry";
+    tableInfo.textContent = `${start}–${end} of ${total} ${showPlural}`;
 
     renderPagination(total);
   }
@@ -807,20 +959,45 @@
   }
 
   function renderStats(stats) {
-    document.getElementById("stat-total").textContent = stats.total_logs;
-    document.getElementById("stat-time").textContent = `${stats.total_time_hours}h`;
-    document.getElementById("stat-today").textContent = `${stats.today_time_hours}h`;
-    document.getElementById("stat-week").textContent = `${stats.week_time_hours}h`;
-    document.getElementById("stat-jira").textContent = stats.jira_logs;
-    document.getElementById("stat-bitbucket").textContent = stats.bitbucket_logs;
-    document.getElementById("stat-github").textContent = stats.github_logs;
-    document.getElementById("stat-git").textContent = stats.git_logs;
-    document.getElementById("stat-manual").textContent = stats.manual_logs;
+    // Animate counters
+    const counters = [
+      ["stat-total", stats.total_logs, ""],
+      ["stat-time", stats.total_time_hours, "h"],
+      ["stat-today", stats.today_time_hours, "h"],
+      ["stat-week", stats.week_time_hours, "h"],
+      ["stat-github", stats.github_logs, ""],
+      ["stat-jira", stats.jira_logs, ""],
+      ["stat-bitbucket", stats.bitbucket_logs, ""],
+      ["stat-git", stats.git_logs, ""],
+      ["stat-manual", stats.manual_logs, ""],
+    ];
+
+    counters.forEach(([id, value, suffix]) => {
+      const val = parseInt(value) || 0;
+      animateCounter(id, val, suffix);
+    });
+
+    // Sparklines
+    if (stats.daily_counts && stats.daily_counts.length > 0) {
+      renderSparkline("sparkline-total", stats.daily_counts, "#4F46E5");
+    }
+
+    // Trend
+    if (stats.trend_percent !== undefined) {
+      const trendEl = document.getElementById("stat-trend-total");
+      if (trendEl) {
+        trendEl.style.display = "inline-flex";
+        const dir = stats.trend_percent >= 0 ? "up" : "down";
+        trendEl.className = `stat-trend ${dir}`;
+        trendEl.querySelector("span:last-child").textContent = Math.abs(stats.trend_percent) + "%";
+      }
+    }
   }
 
   // ─── Actions ───────────────────────────────────────
 
   async function loadData() {
+    renderSkeleton();
     try {
       const [logsData, stats] = await Promise.all([fetchLogs(), fetchStats()]);
       renderTable(logsData);
@@ -942,33 +1119,46 @@
     });
   }
 
-  // ─── Poll Now ───────────────────────────────────────
+  // ─── Poll Now ──────────────────────────────────────
 
   async function triggerPoll() {
-    const btn = document.getElementById("btn-poll-now");
-    if (!btn) return;
+    // Find button — could be any .hero-btn with bi-arrow-repeat
+    const btn = document.querySelector('.hero-btn .bi-arrow-repeat')?.closest('button')
+             || document.querySelector('.topbar-btn .bi-arrow-repeat')?.closest('button');
+    if (!btn) {
+      // Just do silent poll without button feedback
+      try {
+        const res = await fetch("/api/poll", { method: "POST" });
+        const data = await res.json();
+        if (data.status === "ok") {
+          showToast("🔄 Sync completed", "success");
+        }
+        await loadData();
+      } catch (err) {
+        showToast(`❌ Sync error: ${err.message}`, "error");
+      }
+      return;
+    }
 
     const origHTML = btn.innerHTML;
     const origDisabled = btn.disabled;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Polling...';
-    btn.classList.add("btn-loading");
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>';
 
     try {
       const res = await fetch("/api/poll", { method: "POST" });
       const data = await res.json();
       if (data.status === "ok") {
-        showToast("🔄 Poll completed — " + data.message, "success");
+        showToast("🔄 Sync completed — " + data.message, "success");
       } else {
-        showToast("❌ Poll failed", "error");
+        showToast("❌ Sync failed", "error");
       }
       await loadData();
     } catch (err) {
-      showToast(`❌ Poll error: ${err.message}`, "error");
+      showToast(`❌ Sync error: ${err.message}`, "error");
     } finally {
       btn.disabled = origDisabled;
       btn.innerHTML = origHTML;
-      btn.classList.remove("btn-loading");
     }
   }
 
@@ -1005,19 +1195,30 @@
     getSettingsModal().hide();
   }
 
-  // ─── Expose globals (for onclick) ──────────────────
+  // ─── Export helper for cmd palette ─────────────────
 
+  function exportNow() {
+    handleExport("");
+  }
+
+  // ─── Window handlers (for inline onclick) ─────────
+
+  // Dropdown action wrappers (called from table HTML)
+  window.__deleteLog = handleDelete;
+  window.__editLog = handleEdit;
+  window.__classifySingle = handleClassifySingle;
+  window.__enhanceSingle = handleEnhanceSingle;
   window.__goPage = (page) => {
     if (page < 1) return;
     state.page = page;
     loadData();
   };
-
   window.__refreshPage = () => {
     state.page = 1;
     loadData();
   };
 
+  // Expose public names
   window.handleDelete = handleDelete;
   window.handleEdit = handleEdit;
   window.handleExport = handleExport;
@@ -1037,9 +1238,16 @@
   window.generateSummary = generateSummary;
   window.toggleChatPanel = toggleChatPanel;
   window.sendChatMessage = sendChatMessage;
-  window.toggleFilterPanel = toggleFilterPanel;
   window.toggleAIPanel = toggleAIPanel;
   window.triggerPoll = triggerPoll;
+  window.toggleSidebar = toggleSidebar;
+  window.toggleTheme = toggleTheme;
+  window.openCmdPalette = openCmdPalette;
+  window.closeCmdPalette = closeCmdPalette;
+  window.toggleFilterRow = toggleFilterRow;
+  window.filterBySource = filterBySource;
+  window.resetFilters = resetFilters;
+  window.exportNow = exportNow;
 
   // ─── Init ──────────────────────────────────────────
 
@@ -1048,6 +1256,9 @@
   function init() {
     if (_initialized) return;
     _initialized = true;
+
+    // Theme
+    loadTheme();
 
     loadSettings();
     loadData();
@@ -1064,33 +1275,90 @@
       searchTimer = setTimeout(applyFilters, 400);
     });
 
-    btnAddManual.addEventListener("click", () => openModal());
-    btnCancel.addEventListener("click", closeManualModal);
+    // Manual entry form
+    const btnAddManual = document.querySelector("#btn-add-manual, #btn-add-manual-hero");
+    if (btnAddManual) btnAddManual.addEventListener("click", () => openModal());
+    const btnCancel = document.getElementById("btn-cancel");
+    if (btnCancel) btnCancel.addEventListener("click", closeManualModal);
     manualForm.addEventListener("submit", handleFormSubmit);
     settingsForm.addEventListener("submit", handleSettingsSave);
 
     // Chat
-    document.getElementById("chat-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-      }
-    });
-    document.getElementById("btn-chat-send").addEventListener("click", (e) => {
+    const chatInput = document.getElementById("chat-input");
+    if (chatInput) {
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendChatMessage();
+        }
+      });
+    }
+    const chatSendBtn = document.getElementById("btn-chat-send");
+    if (chatSendBtn) chatSendBtn.addEventListener("click", (e) => {
       e.preventDefault();
       sendChatMessage();
     });
 
-    // Export
-    btnExport.addEventListener("click", () => handleExport(""));
-    document.querySelectorAll("[data-export-source]").forEach((btn) => {
-      btn.addEventListener("click", () => handleExport(btn.dataset.exportSource));
+    // Export buttons
+    document.querySelectorAll(".hero-btn .bi-download").forEach((icon) => {
+      icon.closest("button")?.addEventListener("click", () => handleExport(""));
     });
 
     // Sortable headers
     document.querySelectorAll("th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => handleSort(th.dataset.sort));
     });
+
+    // ─── Keyboard Shortcuts ────────────────────────────
+    document.addEventListener("keydown", (e) => {
+      // ⌘K / Ctrl+K — command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        const backdrop = $("#cmd-backdrop");
+        if (backdrop && backdrop.classList.contains("active")) {
+          closeCmdPalette();
+        } else {
+          openCmdPalette();
+        }
+      }
+      // Escape — close command palette
+      if (e.key === "Escape") {
+        closeCmdPalette();
+      }
+      // ⌘N / Ctrl+N — new entry
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        openModal();
+      }
+      // ⌘E / Ctrl+E — export
+      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+        e.preventDefault();
+        handleExport("");
+      }
+      // ⌘, / Ctrl+, — settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        openSettingsModal();
+      }
+    });
+
+    // Command palette search (live filter)
+    const cmdInput = document.getElementById("cmd-input");
+    if (cmdInput) {
+      cmdInput.addEventListener("input", function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll(".cmd-modal-item").forEach((item) => {
+          const text = item.textContent.toLowerCase();
+          item.style.display = text.includes(q) ? "flex" : "none";
+        });
+      });
+      cmdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const visible = document.querySelector('.cmd-modal-item:not([style*="display: none"])');
+          if (visible) visible.click();
+        }
+      });
+    }
 
     // Auto-refresh
     setInterval(loadData, 30000);
