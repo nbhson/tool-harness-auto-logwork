@@ -37,7 +37,6 @@
 - [Tích hợp Bitbucket](#-tích-hợp-bitbucket)
 - [Tích hợp Git Hooks](#-tích-hợp-git-hooks)
 - [API Reference](#-api-reference)
-- [Phát triển](#-phát-triển)
 - [Giấy phép](#-giấy-phép)
 
 ---
@@ -169,40 +168,6 @@ flowchart LR
     P2 --> GEM & OAI & CLD & OR
     P3 --> GEM & OAI & CLD & OR
     GEM & OAI & CLD & OR --> Output
-```
-
-### 🔧 Extensible Framework (Harness Contract)
-
-Work Log Harness được thiết kế với 2 extension point:
-
-**1. Poller Contract** — thêm nguồn dữ liệu mới (GitLab, GitHub, ...) chỉ cần viết 1 function:
-
-```python
-def poll_example() -> None:
-    db = SessionLocal()
-    try:
-        log = WorkLog(source="example", activity_type="action", title="...",
-                      activity_timestamp=..., external_id="...")
-        db.add(log)
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
-```
-
-Đăng ký trong `scheduler.py`:
-```python
-scheduler.add_job(poll_example, "interval", minutes=5, id="example_poller")
-```
-
-**2. AI Ability Contract** — thêm ability mới cho LLM engine chỉ cần thêm method trong `AIService`:
-
-```python
-async def new_ability(self, input_data: str) -> str:
-    prompt = f"Process this: {input_data}"
-    return await self.chat(messages=[{"role": "user", "content": prompt}])
 ```
 
 ### Công nghệ sử dụng
@@ -578,63 +543,6 @@ Mỗi lần commit → ghi JSON vào `~/.worklog_git_hooks.jsonl` → app đọc
 |--------|----------|-------|
 | `GET` | `/api/export/excel` | Export toàn bộ |
 | `GET` | `/api/export/excel/{source}` | Export theo nguồn |
-
----
-
-## 💻 Phát triển
-
-### Chạy với auto-reload
-
-Mặc định `DEBUG=true` → `uvicorn --reload` tự động restart khi code thay đổi.
-
-### Mở rộng: thêm poller mới
-
-```python
-# pollers/gitlab.py
-def poll_gitlab():
-    db = SessionLocal()
-    try:
-        # fetch + map → WorkLog
-        db.commit()
-    except:
-        db.rollback()
-    finally:
-        db.close()
-```
-
-```python
-# pollers/scheduler.py
-from pollers.gitlab import poll_gitlab
-scheduler.add_job(poll_gitlab, "interval", minutes=5, id="gitlab_poller")
-```
-
-### Mở rộng: thêm AI ability mới
-
-```python
-# services/ai_service.py
-async def detect_work_patterns(self, logs: list[dict]) -> str:
-    """Phát hiện patterns trong work logs."""
-    prompt = f"Analyze patterns in these logs: {logs}"
-    return await self.chat(messages=[{"role": "user", "content": prompt}])
-```
-
-```python
-# routers/ai.py
-@router.post("/patterns")
-async def analyze_patterns(req, db):
-    svc = _resolve_service(db)
-    patterns = await svc.detect_work_patterns(logs_data)
-    return {"patterns": patterns}
-```
-
-### Chạy test
-
-```bash
-curl http://127.0.0.1:8765/api/logs/stats
-curl -X POST http://127.0.0.1:8765/api/logs \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Test","activity_type":"meeting","time_spent_minutes":30}'
-```
 
 ---
 
