@@ -40,6 +40,12 @@ class Config:
         os.getenv("BITBUCKET_POLL_INTERVAL_MINUTES", "10")
     )
 
+    # ─── GitHub Models ──────────────────────────────
+    GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
+    GITHUB_BASE_URL: str = os.getenv(
+        "GITHUB_BASE_URL", "https://models.inference.ai.azure.com"
+    )
+
     # ─── Git hooks ──────────────────────────────────
     GIT_HOOK_LOG: str = os.getenv(
         "GIT_HOOK_LOG",
