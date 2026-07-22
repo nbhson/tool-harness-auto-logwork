@@ -550,6 +550,38 @@
     btn.textContent = "✨ Auto-Classify";
   }
 
+  // ─── AI Enhance ──────────────────────────────────────
+
+  async function handleEnhanceSingle(logId) {
+    if (!confirm("🪄 AI Enhance this entry? (rewrite description + estimate time)")) return;
+    try {
+      const res = await fetch(`/api/ai/enhance/${logId}`, { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).detail || "Enhance failed");
+      await loadData();
+      showToast("✅ Entry enhanced!", "success");
+    } catch (err) {
+      showToast(`❌ ${err.message}`, "error");
+    }
+  }
+
+  async function enhanceBatch() {
+    const btn = document.getElementById("btn-ai-classify");
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = "⏳ Enhancing...";
+    try {
+      const res = await fetch("/api/ai/enhance", { method: "POST" });
+      if (!res.ok) throw new Error((await res.json()).detail || "Enhance failed");
+      await loadData();
+      showToast("✅ Batch enhance complete!", "success");
+    } catch (err) {
+      showToast(`❌ ${err.message}`, "error");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🪄 Auto-Enhance";
+    }
+  }
+
   function openSummaryPanel() {
     summaryPanel.style.display = "block";
     // Set default date range
@@ -604,10 +636,12 @@
   }
 
   async function sendChatMessage() {
+    if (sendChatMessage._busy) return;
     const input = document.getElementById("chat-input");
     const query = input.value.trim();
     if (!query) return;
 
+    sendChatMessage._busy = true;
     addChatMessage(query, "user");
     input.value = "";
     addChatMessage("⏳ Thinking...", "bot");
@@ -622,6 +656,8 @@
     } catch (err) {
       if (thinkingMsg) thinkingMsg.remove();
       addChatMessage(`❌ Error: ${err.message}`, "bot");
+    } finally {
+      sendChatMessage._busy = false;
     }
   }
 
@@ -655,14 +691,15 @@
         <td><span class="activity-badge">${activityTypeLabel(log.activity_type)}</span></td>
         <td class="cell-title">
           ${log.url ? `<a href="${log.url}" target="_blank">${escapeHtml(log.title)}</a>` : escapeHtml(log.title)}
-          ${log.description ? `<div class="cell-desc">${escapeHtml(log.description.substring(0, 120))}</div>` : ""}
+          ${log.description ? `<div class="cell-desc" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>` : ""}
         </td>
         <td>${escapeHtml(log.project || "-")}</td>
         <td class="cell-date">${formatDate(log.activity_timestamp)}</td>
         <td class="cell-time">${formatTime(log.time_spent_minutes)}</td>
         <td>${log.external_id ? `<code style="font-size:11px;color:var(--text-secondary)">${escapeHtml(log.external_id.substring(0, 30))}</code>` : "-"}</td>
         <td class="cell-actions">
-          ${state.aiEnabled ? `<button class="btn btn-sm btn-ai" onclick="handleClassifySingle(${log.id})" title="AI Classify">✨</button>` : ""}
+          ${state.aiEnabled ? `<button class="btn btn-sm btn-ai" onclick="handleClassifySingle(${log.id})" title="AI Classify">✨</button>
+          <button class="btn btn-sm btn-ai" onclick="handleEnhanceSingle(${log.id})" title="AI Enhance">🪄</button>` : ""}
           <button class="btn btn-sm btn-outline" onclick="handleEdit(${log.id})" title="Edit">✏️</button>
           <button class="btn btn-sm btn-danger" onclick="handleDelete(${log.id})" title="Delete">🗑️</button>
         </td>
@@ -718,6 +755,7 @@
     document.getElementById("stat-week").textContent = `${stats.week_time_hours}h`;
     document.getElementById("stat-jira").textContent = stats.jira_logs;
     document.getElementById("stat-bitbucket").textContent = stats.bitbucket_logs;
+    document.getElementById("stat-github").textContent = stats.github_logs;
     document.getElementById("stat-git").textContent = stats.git_logs;
     document.getElementById("stat-manual").textContent = stats.manual_logs;
   }
@@ -907,6 +945,8 @@
   window.handleExport = handleExport;
   window.handleClassifySingle = handleClassifySingle;
   window.classifyUnclassified = classifyUnclassified;
+  window.handleEnhanceSingle = handleEnhanceSingle;
+  window.enhanceBatch = enhanceBatch;
   window.openManualModal = () => openModal();
   window.closeManualModal = closeManualModal;
   window.openSettingsModal = openSettingsModal;
@@ -922,7 +962,11 @@
 
   // ─── Init ──────────────────────────────────────────
 
+  let _initialized = false;
+
   function init() {
+    if (_initialized) return;
+    _initialized = true;
     // Load settings first (to show/hide AI toolbar)
     loadSettings();
 
@@ -956,12 +1000,16 @@
     manualForm.addEventListener("submit", handleFormSubmit);
     settingsForm.addEventListener("submit", handleSettingsSave);
 
-    // Chat: Enter to send
+    // Chat: Enter to send + button click
     document.getElementById("chat-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         sendChatMessage();
       }
+    });
+    document.getElementById("btn-chat-send").addEventListener("click", (e) => {
+      e.preventDefault();
+      sendChatMessage();
     });
 
     document.addEventListener("keydown", (e) => {

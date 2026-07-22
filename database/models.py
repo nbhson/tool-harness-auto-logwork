@@ -14,12 +14,13 @@ class WorkLog(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    # Nguồn dữ liệu: 'jira' | 'bitbucket' | 'git' | 'manual'
+    # Nguồn dữ liệu: 'jira' | 'bitbucket' | 'github' | 'git' | 'manual'
     source = Column(String(20), nullable=False, index=True)
 
     # Loại hoạt động:
     #   Jira:     ticket_update | comment | estimation_change | status_change | worklog
     #   Bitbucket: commit | push | pr_create | pr_merge | pr_comment
+    #   GitHub:   commit | pr_create | pr_merge | issue_create | issue_close | comment
     #   Git:      local_commit
     #   Manual:   meeting | code_review | research | other
     activity_type = Column(String(50), nullable=False)

@@ -191,7 +191,7 @@ def export_excel(
 @router.get("/excel/{source}")
 def export_excel_by_source(source: str):
     """Export work logs theo nguồn cụ thể (jira/bitbucket/git/manual)."""
-    valid_sources = {"jira", "bitbucket", "git", "manual"}
+    valid_sources = {"jira", "bitbucket", "github", "git", "manual"}
     if source not in valid_sources:
         from fastapi import HTTPException
         raise HTTPException(

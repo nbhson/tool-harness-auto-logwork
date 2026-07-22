@@ -9,7 +9,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.db import get_db
-from database.models import WorkLog
+from database.models import WorkLog, AppSetting
+from services.ai_service import AIService
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
 
@@ -60,6 +61,7 @@ class StatsOut(BaseModel):
     total_time_hours: float
     jira_logs: int
     bitbucket_logs: int
+    github_logs: int
     git_logs: int
     manual_logs: int
     today_time_hours: float
@@ -132,9 +134,14 @@ def list_logs(
     )
 
 
+def _get_setting(db: Session, key: str) -> str:
+    s = db.query(AppSetting).filter(AppSetting.key == key).first()
+    return s.value if s else ""
+
+
 @router.post("", response_model=WorkLogOut, status_code=201)
-def create_log(entry: WorkLogCreate, db: Session = Depends(get_db)):
-    """Tạo manual work log entry."""
+async def create_log(entry: WorkLogCreate, db: Session = Depends(get_db)):
+    """Tạo manual work log entry. Tự động AI enhance nếu harness đang bật."""
     log = WorkLog(
         source="manual",
         activity_type=entry.activity_type,
@@ -149,6 +156,35 @@ def create_log(entry: WorkLogCreate, db: Session = Depends(get_db)):
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    # Auto-enhance nếu AI harness đang enabled
+    try:
+        enabled = _get_setting(db, "ai_enabled")
+        api_key = _get_setting(db, "ai_api_key")
+        if enabled == "true" and api_key:
+            svc = AIService(
+                provider=_get_setting(db, "ai_provider") or "openai",
+                api_key=api_key,
+                base_url=_get_setting(db, "ai_base_url"),
+                model=_get_setting(db, "ai_model"),
+            )
+            result = await svc.enhance_log(
+                title=log.title,
+                description=log.description or "",
+                activity_type=log.activity_type,
+            )
+            conf = result.get("confidence", 0)
+            if conf > 0.5:
+                if result.get("enhanced_description"):
+                    log.description = result["enhanced_description"]
+                est = result.get("estimated_minutes", 0)
+                if est > 0 and log.time_spent_minutes == 0:
+                    log.time_spent_minutes = est
+                db.commit()
+                db.refresh(log)
+    except Exception:
+        pass  # Silent — không block user nếu AI lỗi
+
     return WorkLogOut.model_validate(log)
 
 
@@ -230,6 +266,7 @@ def get_stats(db: Session = Depends(get_db)):
         total_time_hours=round(total_time / 60, 1),
         jira_logs=count_by_source("jira"),
         bitbucket_logs=count_by_source("bitbucket"),
+        github_logs=count_by_source("github"),
         git_logs=count_by_source("git"),
         manual_logs=count_by_source("manual"),
         today_time_hours=time_since(today_start),

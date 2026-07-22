@@ -46,6 +46,11 @@ class Config:
         "GITHUB_BASE_URL", "https://models.inference.ai.azure.com"
     )
 
+    # ─── GitHub Poller ──────────────────────────────
+    GITHUB_POLL_INTERVAL: int = int(
+        os.getenv("GITHUB_POLL_INTERVAL_MINUTES", "10")
+    )
+
     # ─── Git hooks ──────────────────────────────────
     GIT_HOOK_LOG: str = os.getenv(
         "GIT_HOOK_LOG",

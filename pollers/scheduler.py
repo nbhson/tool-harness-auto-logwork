@@ -15,6 +15,7 @@ def start_scheduler() -> None:
     from pollers.jira import poll_jira
     from pollers.bitbucket import poll_bitbucket
     from pollers.git_hook_reader import read_git_hooks
+    from pollers.github import poll_github
 
     # ─── Jira poller ────────────────────────────────
     if config.JIRA_URL and config.JIRA_API_TOKEN:
@@ -51,6 +52,22 @@ def start_scheduler() -> None:
         )
     else:
         print("  – Bitbucket poller disabled (config missing)")
+
+    # ─── GitHub poller ──────────────────────────────
+    if config.GITHUB_TOKEN:
+        scheduler.add_job(
+            poll_github,
+            "interval",
+            minutes=config.GITHUB_POLL_INTERVAL,
+            id="github_poller",
+            replace_existing=True,
+            name="GitHub Activity Poller",
+        )
+        print(
+            f"  ✓ GitHub poller enabled — every {config.GITHUB_POLL_INTERVAL} min"
+        )
+    else:
+        print("  – GitHub poller disabled (config missing)")
 
     # ─── Git hook reader ────────────────────────────
     scheduler.add_job(

@@ -207,6 +207,48 @@ class AIService:
 
     # ── Harness abilities ─────────────────────────────
 
+    async def enhance_log(
+        self, title: str, description: str = "", activity_type: str = ""
+    ) -> dict:
+        """Rewrite description professionally + estimate time.
+
+        Returns dict with:
+          enhanced_description: professional 1-3 sentence description
+          estimated_minutes: integer (5-480)
+          title (optional): slightly improved title
+          confidence: float 0.0-1.0
+          reasoning: brief explanation
+        """
+        prompt = f"""You are a professional work log assistant. Given a raw work entry, provide:
+- enhanced_description: a professional 1-3 sentence description (write what was done, context, impact)
+- estimated_minutes: reasonable time estimate as integer (5-480)
+- title (optional): slightly improve the title if unclear, keep original otherwise
+- confidence: float 0.0-1.0 how confident you are
+- reasoning: brief one-sentence explanation
+
+Title: {title}
+Description: {description or "(empty)"}
+Type: {activity_type or "unknown"}
+
+Return ONLY valid JSON."""
+
+        raw = await self.chat(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.15,
+            max_tokens=500,
+            response_json=True,
+        )
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return {
+                "enhanced_description": description or title,
+                "estimated_minutes": 0,
+                "title": title,
+                "confidence": 0,
+                "reasoning": "Failed to parse LLM response",
+            }
+
     async def classify_log(self, title: str, description: str = "") -> dict:
         """Phân loại work log: gợi ý category, time, tags."""
         desc = f"\nDescription: {description}" if description else ""

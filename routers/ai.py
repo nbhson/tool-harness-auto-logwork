@@ -89,6 +89,19 @@ class AnalyzeOut(BaseModel):
     log_count: int
 
 
+class EnhanceOut(BaseModel):
+    log_id: int
+    enhanced_description: str
+    estimated_minutes: int
+    title: str
+    confidence: float
+    reasoning: str
+
+
+class BatchEnhanceOut(BaseModel):
+    results: list[EnhanceOut]
+
+
 # ─── Endpoints ─────────────────────────────────────────
 
 
@@ -256,3 +269,84 @@ async def analyze(req: AnalyzeIn, db: Session = Depends(get_db)):
     answer = await svc.analyze_query(logs_data, req.query)
 
     return AnalyzeOut(answer=answer, log_count=len(logs_data))
+
+
+@router.post("/enhance/{log_id}", response_model=EnhanceOut)
+async def enhance_single(log_id: int, db: Session = Depends(get_db)):
+    """🪄 Rewrite description + estimate time cho 1 work log."""
+    log = db.query(WorkLog).filter(WorkLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+
+    svc = _resolve_service(db)
+    result = await svc.enhance_log(
+        title=log.title,
+        description=log.description or "",
+        activity_type=log.activity_type,
+    )
+
+    conf = result.get("confidence", 0)
+    if conf > 0.5:
+        log.description = result.get("enhanced_description", log.description)
+        est = result.get("estimated_minutes", 0)
+        if est > 0 and log.time_spent_minutes == 0:
+            log.time_spent_minutes = est
+        db.commit()
+
+    return EnhanceOut(
+        log_id=log_id,
+        enhanced_description=result.get("enhanced_description", log.description or ""),
+        estimated_minutes=result.get("estimated_minutes", 0),
+        title=result.get("title", log.title),
+        confidence=conf,
+        reasoning=result.get("reasoning", ""),
+    )
+
+
+@router.post("/enhance", response_model=BatchEnhanceOut)
+async def enhance_batch(
+    req: BatchClassifyIn, db: Session = Depends(get_db)
+):
+    """🪄 Batch rewrite descriptions + estimate time."""
+    q = db.query(WorkLog)
+    if req.log_ids:
+        q = q.filter(WorkLog.id.in_(req.log_ids))
+    else:
+        q = q.filter(
+            (WorkLog.description.is_(None))
+            | (WorkLog.description == "")
+            | (WorkLog.time_spent_minutes == 0)
+        )
+    logs = q.order_by(WorkLog.activity_timestamp.desc()).limit(50).all()
+
+    if not logs:
+        raise HTTPException(status_code=404, detail="No matching logs found")
+
+    svc = _resolve_service(db)
+    results: list[EnhanceOut] = []
+
+    for log in logs:
+        result = await svc.enhance_log(
+            title=log.title,
+            description=log.description or "",
+            activity_type=log.activity_type,
+        )
+        conf = result.get("confidence", 0)
+        if conf > 0.5:
+            log.description = result.get("enhanced_description", log.description)
+            est = result.get("estimated_minutes", 0)
+            if est > 0 and log.time_spent_minutes == 0:
+                log.time_spent_minutes = est
+        results.append(
+            EnhanceOut(
+                log_id=log.id,
+                enhanced_description=result.get("enhanced_description", log.description or ""),
+                estimated_minutes=result.get("estimated_minutes", 0),
+                title=result.get("title", log.title),
+                confidence=conf,
+                reasoning=result.get("reasoning", ""),
+            )
+        )
+
+    db.commit()
+    return BatchEnhanceOut(results=results)
