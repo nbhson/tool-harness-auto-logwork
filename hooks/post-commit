@@ -1,0 +1,48 @@
+#!/bin/bash
+# ═════════════════════════════════════════════════════════
+# Git Post-Commit Hook — Work Log Tracker
+#
+# Hook này được git gọi sau mỗi lần commit thành công.
+# Nó ghi thông tin commit vào file JSON Lines (~/.worklog_git_hooks.jsonl)
+# để Work Log Tracker đọc và import vào database.
+#
+# Cài đặt:
+#   hooks/setup.sh    (chạy 1 lần)
+# ═════════════════════════════════════════════════════════
+
+set -e
+
+# File log — mặc định ~/.worklog_git_hooks.jsonl
+LOG_FILE="${WORKLOG_HOOK_FILE:-$HOME/.worklog_git_hooks.jsonl}"
+
+# Chỉ ghi nếu file có thể ghi được
+if touch "$LOG_FILE" 2>/dev/null; then
+    # Lấy thông tin commit
+    COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+    COMMIT_MSG=$(git log -1 --format=%s 2>/dev/null || echo "unknown")
+    COMMIT_DATE=$(git log -1 --format=%ci 2>/dev/null || date -u +"%Y-%m-%d %H:%M:%S %z")
+    COMMIT_AUTHOR=$(git log -1 --format='%an <%ae>' 2>/dev/null || echo "unknown")
+    REPO_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")
+    REPO_DIR=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+
+    # Đếm files changed (chỉ trong commit này)
+    FILES_CHANGED=$(git diff-tree --no-commit-id -r --name-only HEAD 2>/dev/null | tr '\n' ',' | sed 's/,$//' || echo "")
+
+    # Tạo JSON entry
+    ENTRY=$(cat <<EOF
+{
+  "source": "git",
+  "activity_type": "local_commit",
+  "title": $(echo "$COMMIT_MSG" | jq -Rs '.' 2>/dev/null || echo "\"$COMMIT_MSG\""),
+  "description": "Files changed: $FILES_CHANGED | Author: $COMMIT_AUTHOR",
+  "project": "$REPO_NAME",
+  "url": "",
+  "activity_timestamp": "$COMMIT_DATE",
+  "time_spent_minutes": 0,
+  "external_id": "local_commit_${REPO_NAME}_${COMMIT_HASH}"
+}
+EOF
+    )
+
+    echo "$ENTRY" >> "$LOG_FILE"
+fi

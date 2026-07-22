@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Log Harness</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+</head>
+<body>
+  <!-- ═══ Header ═══════════════════════════════════ -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">🤖</span>
+      <h1>Work Log Harness</h1>
+      <span id="ai-enabled-badge" class="ai-badge" style="display:none" title="AI Harness is active">✨ AI</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-outline" onclick="openSettingsModal()" title="AI Harness Settings">⚙️</button>
+      <span>
+        <span class="status-dot active" id="status-dot" title="System running"></span>
+        Pollers active
+      </span>
+      <span id="poller-status" title="Last auto-collect"></span>
+    </div>
+  </header>
+
+  <!-- ═══ Container ════════════════════════════════ -->
+  <main class="container">
+    <!-- Stats -->
+    <section class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Total Logs</div>
+        <div class="stat-value" id="stat-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Time</div>
+        <div class="stat-value" id="stat-time">—</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today</div>
+        <div class="stat-value" id="stat-today">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Week</div>
+        <div class="stat-value" id="stat-week">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="badge badge-jira">Jira</span></div>
+        <div class="stat-value" id="stat-jira">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="badge badge-bitbucket">Bitbucket</span></div>
+        <div class="stat-value" id="stat-bitbucket">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="badge badge-git">Git</span></div>
+        <div class="stat-value" id="stat-git">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label"><span class="badge badge-manual">Manual</span></div>
+        <div class="stat-value" id="stat-manual">—</div>
+      </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="filter-bar">
+      <label for="filter-source">Source</label>
+      <select id="filter-source">
+        <option value="">All</option>
+        <option value="jira">🔵 Jira</option>
+        <option value="bitbucket">🟢 Bitbucket</option>
+        <option value="git">🟡 Git</option>
+        <option value="manual">🔴 Manual</option>
+      </select>
+
+      <label for="filter-type">Type</label>
+      <select id="filter-type">
+        <option value="">All</option>
+        <option value="ticket_update">Ticket Update</option>
+        <option value="comment">Comment</option>
+        <option value="estimation_change">Estimation</option>
+        <option value="status_change">Status</option>
+        <option value="commit">Commit</option>
+        <option value="push">Push</option>
+        <option value="pr_create">PR Create</option>
+        <option value="pr_merge">PR Merge</option>
+        <option value="local_commit">Local Commit</option>
+        <option value="meeting">Meeting</option>
+        <option value="code_review">Code Review</option>
+        <option value="research">Research</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="filter-from">From</label>
+      <input type="date" id="filter-from" />
+
+      <label for="filter-to">To</label>
+      <input type="date" id="filter-to" />
+
+      <input type="search" id="filter-search" class="search-input" placeholder="🔍 Search title / description..." />
+    </section>
+
+    <!-- Actions -->
+    <section class="btn-group" style="margin-bottom: 14px;">
+      <button class="btn btn-primary" id="btn-add-manual">➕ Add Manual Entry</button>
+      <button class="btn btn-success" id="btn-export">📥 Export Excel</button>
+      <button class="btn btn-outline" data-export-source="jira">📥 Jira</button>
+      <button class="btn btn-outline" data-export-source="bitbucket">📥 Bitbucket</button>
+      <button class="btn btn-outline" data-export-source="git">📥 Git</button>
+      <button class="btn btn-outline" data-export-source="manual">📥 Manual</button>
+    </section>
+
+    <!-- AI Tools -->
+    <section class="ai-toolbar" id="ai-toolbar" style="display:none">
+      <span class="ai-toolbar-label">🤖 AI Harness</span>
+      <button class="btn btn-ai" id="btn-ai-classify" onclick="classifyUnclassified()">✨ Auto-Classify</button>
+      <button class="btn btn-ai" onclick="openSummaryPanel()">📊 Generate Summary</button>
+      <button class="btn btn-ai" onclick="toggleChatPanel()">💬 Ask AI</button>
+      <a href="/api/settings" target="_blank" class="btn btn-sm btn-outline" style="margin-left:auto">🔌 Test API</a>
+    </section>
+
+    <!-- ═══ summary Panel ══════════════════════════════ -->
+    <section class="summary-panel" id="summary-panel" style="display:none">
+      <div class="summary-panel-header">
+        <span>📊 AI Summary</span>
+        <button class="modal-close" onclick="closeSummaryPanel()">&times;</button>
+      </div>
+      <div class="summary-panel-body">
+        <div class="form-row" style="margin-bottom:10px">
+          <div class="form-group" style="margin:0">
+            <label>From</label>
+            <input type="date" class="form-control" id="summary-from" />
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>To</label>
+            <input type="date" class="form-control" id="summary-to" />
+          </div>
+          <div class="form-group" style="margin:0;display:flex;align-items:flex-end">
+            <button class="btn btn-ai" onclick="generateSummary()">✨ Generate</button>
+          </div>
+        </div>
+        <div id="summary-result" class="summary-content">
+          <div class="summary-placeholder">Select date range and click Generate.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Chat Panel ══════════════════════════════════ -->
+    <section class="chat-panel" id="chat-panel" style="display:none">
+      <div class="chat-panel-header">
+        <span>💬 Ask AI about your work logs</span>
+        <button class="modal-close" onclick="toggleChatPanel()">&times;</button>
+      </div>
+      <div class="chat-panel-body" id="chat-messages">
+        <div class="chat-msg bot">👋 Ask me anything about your work logs!<br/><small>e.g., <em>"What did I work on yesterday?"</em> or <em>"How many hours did I spend on meetings this week?"</em></small></div>
+      </div>
+      <div class="chat-panel-input">
+        <input type="text" class="form-control" id="chat-input" placeholder="Ask about your work logs..." />
+        <button class="btn btn-ai" onclick="sendChatMessage()">➤</button>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="table-container">
+      <div class="table-toolbar">
+        <div class="table-info" id="table-info">Loading...</div>
+        <button class="btn btn-sm btn-outline" onclick="window.__refreshPage()">🔄 Refresh</button>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th data-sort="source">Source <span class="sort-icon">⇅</span></th>
+              <th data-sort="activity_type">Type <span class="sort-icon">⇅</span></th>
+              <th data-sort="title">Title / Description <span class="sort-icon">⇅</span></th>
+              <th data-sort="project">Project <span class="sort-icon">⇅</span></th>
+              <th data-sort="activity_timestamp">Date <span class="sort-icon">⇅</span></th>
+              <th data-sort="time_spent_minutes">Time <span class="sort-icon">⇅</span></th>
+              <th>External ID</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody">
+            <tr><td colspan="8"><div class="loading"><div class="spinner"></div><p>Loading work logs...</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </section>
+  </main>
+
+  <!-- ═══ Manual Entry Modal ══════════════════════ -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Manual Entry</h2>
+        <button class="modal-close" id="btn-close-modal" onclick="closeManualModal()">&times;</button>
+      </div>
+      <form id="manual-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Title <span class="required">*</span></label>
+            <input type="text" class="form-control" id="entry-title" required placeholder="e.g., Sprint planning meeting" />
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" id="entry-desc" rows="3" placeholder="Details about this activity..."></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Activity Type</label>
+              <select class="form-control" id="entry-type">
+                <option value="meeting">Meeting</option>
+                <option value="code_review">Code Review</option>
+                <option value="research">Research</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Project</label>
+              <input type="text" class="form-control" id="entry-project" placeholder="e.g., PROJ, my-repo" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date &amp; Time</label>
+              <input type="datetime-local" class="form-control" id="entry-date" />
+            </div>
+            <div class="form-group">
+              <label>URL (optional)</label>
+              <input type="url" class="form-control" id="entry-url" placeholder="https://..." />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Hours</label>
+              <input type="number" class="form-control" id="entry-hours" min="0" max="24" value="0" />
+            </div>
+            <div class="form-group">
+              <label>Minutes</label>
+              <input type="number" class="form-control" id="entry-minutes" min="0" max="59" value="0" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btn-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">💾 Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ AI Settings Modal ═══════════════════════ -->
+  <div class="modal-overlay" id="settings-modal-overlay">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>⚙️ AI Harness Settings</h2>
+        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <form id="settings-form">
+        <div class="modal-body">
+          <!-- Enable toggle -->
+          <div class="form-group">
+            <label>Enable AI Harness</label>
+            <select class="form-control" id="setting-ai-enabled">
+              <option value="true">✅ Enabled — LLM sẽ xử lý classify / summary / chat</option>
+              <option value="false">⛔ Disabled</option>
+            </select>
+          </div>
+
+          <!-- Provider -->
+          <div class="form-group">
+            <label>LLM Provider</label>
+            <select class="form-control" id="setting-ai-provider" onchange="onProviderChange()">
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini (khuyên dùng)</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="custom">Custom (OpenAI-compatible)</option>
+            </select>
+            <small style="color:var(--text-secondary);font-size:11px">Gemini có free tier. OpenAI và Anthropic require payment.</small>
+          </div>
+
+          <!-- API Key -->
+          <div class="form-group">
+            <label>API Key</label>
+            <div style="display:flex;gap:8px">
+              <input type="password" class="form-control" id="setting-ai-api-key" placeholder="sk-... or AIza... or your key" style="flex:1" />
+              <button type="button" class="btn btn-sm btn-outline" onclick="toggleApiKeyVisibility()" id="btn-toggle-key" title="Show/Hide">👁️</button>
+            </div>
+            <small id="ai-key-hint" style="color:var(--text-secondary);font-size:11px">
+              <a href="https://aistudio.google.com/apikey" target="_blank">Get Gemini API Key</a> (free)
+            </small>
+          </div>
+
+          <!-- Base URL -->
+          <div class="form-group">
+            <label>Base URL</label>
+            <input type="url" class="form-control" id="setting-ai-base-url" placeholder="https://api.openai.com/v1" />
+          </div>
+
+          <!-- Model — dynamic dropdown (populated after test) -->
+          <div class="form-group" id="model-field-group">
+            <label>Model</label>
+            <div id="model-input-wrapper">
+              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (click Test Connection để tải danh sách)" />
+            </div>
+            <small id="ai-model-hint" style="color:var(--text-secondary);font-size:11px"></small>
+            <div id="model-load-status" style="font-size:12px;margin-top:4px"></div>
+          </div>
+
+          <!-- Test connection -->
+          <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px">
+            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
+            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeSettingsModal()">Close</button>
+          <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Toast Container ══════════════════════════ -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- ═══ Scripts ══════════════════════════════════ -->
+  <script src="/static/script.js"></script>
+</body>
+</html>
