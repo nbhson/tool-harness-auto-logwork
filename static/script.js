@@ -840,6 +840,43 @@
     `).join("");
   }
 
+  // ─── Read More / Less ─────────────────────────────
+
+  const DESC_TRUNCATE_LENGTH = 90;
+
+  function renderDescription(log) {
+    if (!log.description) return "";
+    const fullText = log.description;
+    const escapedShort = escapeHtml(fullText.substring(0, DESC_TRUNCATE_LENGTH));
+    const needsTruncation = fullText.length > DESC_TRUNCATE_LENGTH;
+    if (!needsTruncation) {
+      return `<div class="cell-desc">${escapeHtml(fullText)}</div>`;
+    }
+    return `<div class="cell-desc truncated" id="desc-${log.id}" data-full="${escapeHtml(fullText)}">${escapedShort}…</div>
+      <span class="desc-toggle" id="toggle-${log.id}" onclick="toggleDesc(${log.id})">Read more</span>`;
+  }
+
+  function toggleDesc(id) {
+    const descEl = document.getElementById(`desc-${id}`);
+    const toggleEl = document.getElementById(`toggle-${id}`);
+    if (!descEl || !toggleEl) return;
+
+    const isExpanded = descEl.classList.contains("expanded");
+
+    if (isExpanded) {
+      descEl.classList.remove("expanded");
+      descEl.classList.add("truncated");
+      toggleEl.textContent = "Read more";
+    } else {
+      // Restore full text
+      const full = descEl.dataset.full;
+      if (full) descEl.textContent = full;
+      descEl.classList.remove("truncated");
+      descEl.classList.add("expanded");
+      toggleEl.textContent = "Read less";
+    }
+  }
+
   function renderTable(data) {
     const { items, total, page } = data;
     state.total = total;
@@ -870,9 +907,7 @@
           ${log.url
             ? `<a href="${escapeHtml(log.url)}" target="_blank" title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</a>`
             : `<span title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</span>`}
-          ${log.description
-            ? `<div class="cell-desc" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>`
-            : ""}
+          ${renderDescription(log)}
         </td>
         <td>${escapeHtml(log.project || "-")}</td>
         <td class="cell-date">${formatDate(log.activity_timestamp)}</td>
@@ -1248,6 +1283,7 @@
   window.filterBySource = filterBySource;
   window.resetFilters = resetFilters;
   window.exportNow = exportNow;
+  window.toggleDesc = toggleDesc;
 
   // ─── Init ──────────────────────────────────────────
 
