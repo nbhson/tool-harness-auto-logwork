@@ -300,16 +300,16 @@
             </small>
           </div>
 
-          <!-- Test connection — sớm để load models trước khi chọn model -->
-          <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px">
-            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
-            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
-          </div>
-
           <!-- Base URL -->
           <div class="form-group">
             <label>Base URL</label>
             <input type="url" class="form-control" id="setting-ai-base-url" placeholder="https://api.openai.com/v1" />
+          </div>
+
+          <!-- Test connection -->
+          <div class="form-group" style="border-top:1px solid var(--border);padding-top:14px">
+            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
+            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
           </div>
 
           <!-- Model — dynamic dropdown (populated after test) -->
