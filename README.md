@@ -3,11 +3,12 @@
 # 🤖 Work Log Harness
 
 **AI-Powered Work Log Collector & Analyzer**  
-*Tự động thu thập, phân loại, và báo cáo thời gian làm việc từ Jira, Bitbucket, Git, và Manual Entry*
+*Tự động thu thập, phân loại, và báo cáo thời gian làm việc từ GitHub, Jira, Bitbucket, Git, và Manual Entry*
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-2f5496?logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com)
 [![License](https://img.shields.io/badge/License-MIT-6c757d)](LICENSE)
 
 </div>
@@ -17,6 +18,7 @@
 ## 📋 Mục lục
 
 - [Tổng quan](#-tổng-quan)
+- [Screenshots](#-screenshots)
 - [Tính năng](#-tính-năng)
 - [Kiến trúc](#-kiến-trúc)
   - [System Architecture](#-system-architecture)
@@ -27,26 +29,34 @@
 - [Cài đặt & Chạy](#-cài-đặt--chạy)
 - [Cấu hình AI Harness](#-cấu-hình-ai-harness)
 - [Hướng dẫn sử dụng](#-hướng-dẫn-sử-dụng)
+  - [Dashboard Overview](#-dashboard-overview)
+  - [Sidebar Navigation](#-sidebar-navigation)
+  - [Command Palette](#-command-palette)
+  - [Dark Mode](#-dark-mode)
   - [Manual Entry](#-manual-entry)
   - [Bảng Work Logs](#-bảng-work-logs)
   - [Export Excel](#-export-excel)
   - [AI Auto-Classify](#-ai-auto-classify)
   - [AI Generate Summary](#-ai-generate-summary)
   - [AI Chat](#-ai-chat)
+  - [Poll Now](#-poll-now)
+- [Tích hợp GitHub](#-tích-hợp-github)
 - [Tích hợp Jira](#-tích-hợp-jira)
 - [Tích hợp Bitbucket](#-tích-hợp-bitbucket)
 - [Tích hợp Git Hooks](#-tích-hợp-git-hooks)
 - [API Reference](#-api-reference)
+- [Keyboard Shortcuts](#-keyboard-shortcuts)
 - [Giấy phép](#-giấy-phép)
 
 ---
 
 ## 🎯 Tổng quan
 
-**Work Log Harness** là một AI-powered framework giúp bạn tự động ghi nhận, phân loại, phân tích thời gian làm việc. Không chỉ là công cụ collect dữ liệu — LLM engine ở core cho phép xử lý thông minh (classify, summarize, chat) trên toàn bộ work logs.
+**Work Log Harness** là một AI-powered enterprise dashboard giúp bạn tự động ghi nhận, phân loại, phân tích thời gian làm việc từ nhiều nguồn. Với giao diện premium SaaS và LLM engine tích hợp sẵn, công cụ biến việc timesheet thành trải nghiệm liền mạch.
 
 | Nguồn | Cơ chế | Dữ liệu thu thập |
 |-------|--------|------------------|
+| **GitHub** | Polling REST API (Events + Search Commits) | Commits, push activities |
 | **Jira** | Polling REST API | Ticket update, comment, estimation change, status change |
 | **Bitbucket** | Polling REST API | Commit, pull request |
 | **Git** | Post-commit hook | Local commit (message, files, timestamp) |
@@ -55,13 +65,38 @@
 
 ---
 
+## 🖼️ Screenshots
+
+| Dashboard | Dark Mode |
+|-----------|-----------|
+| Premium stat cards, enterprise table, AI Harness panel | Full dark theme with sidebar |
+
+| Command Palette | AI Features |
+|-----------------|-------------|
+| ⌘K quick actions palette | Auto-classify, summary, chat |
+
+---
+
 ## ✨ Tính năng
 
+### UI/UX — Enterprise SaaS Design
+- **🎨 Premium Dashboard** — Thiết kế lấy cảm hứng từ Stripe/Linear/Vercel
+- **🌙 Dark Mode** — Theme toggle với localStorage persistence
+- **⌨️ Command Palette** — ⌘K quick search & actions
+- **📊 Stat Cards** — 9-card grid với animated counters, sparklines, trend badges
+- **🔍 Command Filter Toolbar** — Search, source/type/date filters với live search
+- **📋 Enterprise Table** — Sticky headers, alternating rows, dropdown action menus
+- **⚡ Skeleton Loading** — Shimmer animation khi load data
+- **🔔 Toast Notifications** — Premium slide-in notifications với color-coded types
+- **📱 Responsive** — Tối ưu từ desktop 1400px+ đến mobile 480px
+
 ### Thu thập dữ liệu
+- **🔄 Auto-collect GitHub** — Events API + Search Commits API (dual fallback)
 - **🔄 Auto-collect Jira** — Poll API, detect issue update, comment, estimation, status change
 - **🔄 Auto-collect Bitbucket** — Commit mới, PR activities
 - **📝 Local Git Tracking** — Post-commit hook ghi mỗi lần commit
 - **➕ Manual Entry** — Form nhập tay cho meeting, code review, research
+- **⏱️ Poll Now** — Manual trigger để poll ngay lập tức
 
 ### AI Harness Engine
 - **✨ Auto-Classify** — LLM tự động phân loại activity type, gợi ý thời gian, gắn tags
@@ -70,9 +105,8 @@
 - **⚙️ Runtime Config** — Nhập host/key/model trực tiếp từ UI, không cần sửa .env
 
 ### UI & Export
-- **📊 Bảng hiển thị** — Filter (source, type, date), search, sort, phân trang
-- **📥 Export Excel** — File .xlsx với 2 sheets (chi tiết + summary)
-- **📈 Dashboard** — Stats cards: tổng logs, tổng thời gian, hôm nay, tuần này
+- **📥 Export Excel** — File .xlsx với 2 sheets (chi tiết + summary), màu theo source
+- **📈 Dashboard Stats** — Tổng logs, tổng thời gian, hôm nay, tuần này, breakdown theo nguồn
 
 ---
 
@@ -82,10 +116,10 @@
 
 ```mermaid
 flowchart TB
-    subgraph Browser["🌐 Browser UI"]
-        UI["Single-page App<br/>Table / Filters / Modals"]
-        AS["⚙️ AI Settings<br/>Provider, Key, Model"]
-        AT["🤖 AI Toolbar<br/>Classify / Summary / Chat"]
+    subgraph Browser["🌐 Browser UI — Enterprise SPA"]
+        UI["Sidebar / Top Bar / Command Palette<br/>Stat Cards / Filters / Table"]
+        AS["⚙️ AI Settings Modal<br/>Provider, Key, Model"]
+        AT["🤖 AI Toolbar<br/>Classify / Summary / Chat / Enhance"]
     end
 
     subgraph Server["🐍 FastAPI Server"]
@@ -95,6 +129,7 @@ flowchart TB
         ER["📥 Export<br/><i>/api/export/excel</i>"]
         SR["⚙️ Settings API<br/><i>/api/settings</i>"]
         AR["🤖 AI Endpoints<br/><i>/api/ai/*</i>"]
+        PR["🔄 Poll Endpoint<br/><i>POST /api/poll</i>"]
         ORM["🗄️ SQLAlchemy ORM"]
     end
 
@@ -109,28 +144,32 @@ flowchart TB
     end
 
     subgraph Pollers["⏱️ APScheduler Background Jobs"]
+        GP["🟣 GitHub Poller<br/>Events + Search Commits"]
         JP["🔵 Jira Poller"]
         BP["🟢 Bitbucket Poller"]
-        GP["🟡 Git Hook Reader"]
+        HP["🟡 Git Hook Reader"]
     end
 
     subgraph External["☁️ External / Local"]
+        GHAPI["GitHub REST API v3<br/>Events + Search Commits"]
         JC["Jira Cloud API v3"]
         BC["Bitbucket Cloud API v2"]
-        GH["📄 ~/.worklog_git_hooks.jsonl"]
+        HFILE["📄 ~/.worklog_git_hooks.jsonl"]
         LLM["🧠 LLM API<br/>Gemini / OpenAI / Claude / ..."]
         DB[("💾 SQLite Database<br/>worklog.db")]
     end
 
     UI & AS & AT --> WR & LR & ER & SR & AR
+    PR --> GP & JP & BP
     WR & LR & ER & SR & AR --> ORM
     ORM --> DB
     AR --> SVC
     SVC --> LLM
     Pollers --> ORM
+    GP --> GHAPI
     JP --> JC
     BP --> BC
-    GP --> GH
+    HP --> HFILE
 ```
 
 ### 🤖 Harness Engine (AI Core)
@@ -180,17 +219,20 @@ flowchart LR
 | **ORM** | SQLAlchemy 2.0 | Database |
 | **Database** | SQLite | Zero-config storage |
 | **Scheduler** | APScheduler 3.10 | Background polling jobs |
-| **HTTP client** | httpx 0.28 | Jira, Bitbucket & LLM API calls |
+| **HTTP client** | httpx 0.28 | GitHub, Jira, Bitbucket & LLM API calls |
 | **Excel export** | openpyxl 3.1 | .xlsx với styling |
 | **AI Engine** | Provider-agnostic | Gemini / OpenAI / Claude / OpenRouter / DeepSeek |
-| **Frontend** | Vanilla JS + CSS | SPA, fetch API, modal |
+| **Frontend** | Vanilla JS + CSS | Premium SPA, fetch API, modals |
+| **UI Framework** | Bootstrap 5.3.3 | Modals, dropdowns, pagination |
+| **Typography** | Inter (Google Fonts) | Design system font |
+| **Icons** | Bootstrap Icons | Icon library |
 
 ### Cấu trúc thư mục
 
 ```
 tool-auto-logwork/
 ├── app.py                      # Entry point — FastAPI app
-├── config.py                   # Env config (server, DB, Jira, Bitbucket)
+├── config.py                   # Env config (server, DB, GitHub, Jira, Bitbucket)
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -208,9 +250,10 @@ tool-auto-logwork/
 │                                #   • list_models()     — fetch models từ API
 │
 ├── pollers/
-│   ├── scheduler.py            # APScheduler — lifecycle
-│   ├── jira.py                 # Jira Cloud REST API v3 poller
-│   ├── bitbucket.py            # Bitbucket Cloud REST API v2 poller
+│   ├── scheduler.py            # APScheduler — lifecycle (immediate startup)
+│   ├── github.py               # 🟣 GitHub Poller — Events + Search Commits
+│   ├── jira.py                 # 🔵 Jira Cloud REST API v3 poller
+│   ├── bitbucket.py            # 🟢 Bitbucket Cloud REST API v2 poller
 │   └── git_hook_reader.py      # Đọc ~/.worklog_git_hooks.jsonl
 │
 ├── routers/
@@ -218,14 +261,15 @@ tool-auto-logwork/
 │   ├── logs.py                 # CRUD: /api/logs
 │   ├── export.py               # Export: /api/export/excel
 │   ├── settings.py             # ⚙️ Settings: /api/settings
-│   └── ai.py                   # 🤖 AI: /api/ai/classify, /summarize, /analyze
+│   ├── ai.py                   # 🤖 AI: /api/ai/classify, /summarize, /analyze
+│   └── poll.py                 # 🔄 Poll Now: POST /api/poll
 │
 ├── templates/
-│   └── index.html              # SPA — table, modals, AI toolbar, chat
+│   └── index.html              # Enterprise SPA — sidebar, top bar, stats, table, AI panels
 │
 ├── static/
-│   ├── style.css               # Styles (responsive, AI toolbar, chat, summary)
-│   └── script.js               # JS (settings, classify, summary, chat, ...)
+│   ├── style.css               # Premium design system (~650 lines, light/dark theme)
+│   └── script.js               # JS — sidebar, theme, cmd palette, AI, table, poll
 │
 └── hooks/
     ├── setup.sh                # Cài git hooks
@@ -239,15 +283,15 @@ tool-auto-logwork/
 | Column | Type | Mô tả |
 |--------|------|-------|
 | `id` | INTEGER (PK) | Auto-increment |
-| `source` | VARCHAR(20) | `jira`, `bitbucket`, `git`, `manual` |
-| `activity_type` | VARCHAR(50) | `ticket_update`, `comment`, `commit`, `meeting`, ... |
+| `source` | VARCHAR(20) | `github`, `jira`, `bitbucket`, `git`, `manual` |
+| `activity_type` | VARCHAR(50) | `commit`, `ticket_update`, `comment`, `meeting`, ... |
 | `title` | VARCHAR(500) | Tiêu đề ngắn gọn |
 | `description` | TEXT | Mô tả chi tiết |
 | `project` | VARCHAR(100) | Project key / repo name |
 | `url` | VARCHAR(1000) | Link đến ticket / PR / commit |
 | `activity_timestamp` | DATETIME | Thời điểm hoạt động |
 | `time_spent_minutes` | INTEGER | Thời gian (phút) |
-| `external_id` | VARCHAR(200) | ID bên ngoài (issue key, commit hash) |
+| `external_id` | VARCHAR(200) | ID bên ngoài (commit hash, issue key) |
 | `metadata_json` | TEXT | Extra data JSON |
 | `created_at` | DATETIME | Thời điểm log được tạo |
 
@@ -302,6 +346,7 @@ Bạn sẽ thấy:
 ⏱  Starting pollers...
   – Jira poller disabled (config missing)
   – Bitbucket poller disabled (config missing)
+  ✓ GitHub poller enabled — every 5 min
   ✓ Git hook reader enabled — every 2 min
   ✓ Scheduler started
 ```
@@ -317,7 +362,7 @@ Tất cả cấu hình AI được thực hiện **trực tiếp từ giao diệ
 ### Các bước
 
 ```
-  1. Mở app → Click ⚙️ ở góc phải header
+  1. Mở app → Click ⚙️ ở top bar hoặc sidebar → Settings
   2. Chọn provider (khuyên dùng: Gemini — có free tier)
   3. Dán API Key
   4. Click "🔌 Test Connection & Load Models"
@@ -358,31 +403,79 @@ Enter API Key
 
 ## 📖 Hướng dẫn sử dụng
 
+### 🔹 Dashboard Overview
+
+Dashboard được thiết kế theo chuẩn enterprise SaaS (Stripe/Linear/Vercel inspired):
+
+| Khu vực | Mô tả |
+|---------|-------|
+| **Sidebar** (trái) | 72px icon rail, expandable nav (256px), user profile |
+| **Top Bar** (trên) | Breadcrumb, command palette (⌘K), AI status, theme toggle, sync, settings, avatar |
+| **Dashboard Hero** | Tiêu đề trang + action buttons (Sync, Export, Add Entry) |
+| **Stat Cards** | 9-card grid: Total Logs, Total Time, Today, This Week, breakdown theo source |
+| **Filter Toolbar** | Search, source picker, type picker, date range, reset |
+| **AI Harness Panel** | Auto-classify, auto-enhance, summary, chat, API link |
+| **Enterprise Table** | Work logs với dropdown action menus, sticky headers |
+
+### 🔹 Sidebar Navigation
+
+- **Desktop**: Sidebar ở chế độ icon rail (72px) mặc định
+  - Click vào sidebar edge / hamburger → expand (256px) với labels
+  - Các nav items: Dashboard, Add Entry, Refresh
+  - Source quick filters: GitHub, Jira, Bitbucket, Manual
+  - Tools: AI Harness, Settings
+- **Mobile**: Sidebar là off-canvas overlay
+  - Click hamburger icon (☰) ở top bar → slide-in từ trái
+  - Click overlay mờ → đóng sidebar
+
+### 🔹 Command Palette
+
+- **Mở**: Click vào search bar ở top bar, hoặc nhấn **⌘+K** (Mac) / **Ctrl+K** (Windows/Linux)
+- **Các action**:
+  - `Search work logs` — focus vào filter search
+  - `Add manual entry` — mở modal tạo entry mới
+  - `Open settings` — mở AI settings modal
+  - `Sync all sources` — trigger poll ngay lập tức
+  - `Export to Excel` — download Excel file
+  - `Toggle dark mode` — chuyển đổi theme
+- **Live search**: Gõ để filter danh sách command
+- **Enter**: Chạy command đang được highlight
+
+### 🔹 Dark Mode
+
+- Click 🌙/☀️ icon ở top bar → toggle light/dark
+- Trạng thái được lưu trong `localStorage`, persist qua các lần reload
+- Full theme system với CSS custom properties:
+  - Màu nền, card, text, border được chuyển sang dark palette
+  - Gradient và shadow được tối ưu cho dark mode
+  - Shimmer animation dùng overlay light thay vì white
+
 ### 🔹 Manual Entry
 
-1. Click nút **➕ Add Manual Entry**
+1. Click **➕ Add Entry** ở dashboard hero, hoặc dùng **⌘+N**
 2. Điền form: Title, Description, Activity Type, Project, Date, Time
 3. Click **💾 Save**
+- Hoặc double-click vào bảng → modal edit
 
 ### 🔹 Bảng Work Logs
 
-- **Filter**: Source, Type, Date range
-- **Search**: Title / description / project
-- **Sort**: Click header column
-- **Phân trang**: 50 entries/trang
-- **Edit / Delete**: ✏️ 🗑️ ở mỗi dòng
-- **✨ AI Classify**: Nút ✨ ở mỗi dòng (chỉ hiện khi AI enabled)
+- **Filter**: Source, Type, Date range — click dropdown/date picker
+- **Search**: Gõ vào ô search (300ms debounce) — tìm title / description / project
+- **Sort**: Click header column (toggles asc/desc), arrow icon chỉ hướng sort
+- **Phân trang**: 50 entries/trang, pagination controls ở cuối bảng
+- **Actions menu**: Click ⋮ ở mỗi dòng → dropdown với Edit, Delete, Classify, Enhance
+- **Refresh**: Click Sync ở hero, hoặc Refresh ở table header, hoặc **⌘⇧R**
 
 ### 🔹 Export Excel
 
-- **📥 Export Excel** — toàn bộ dữ liệu
-- **📥 Jira / Bitbucket / Git / Manual** — riêng từng nguồn
+- **📥 Export** ở dashboard hero — toàn bộ dữ liệu
+- Hoặc dùng **⌘+E**
 - File gồm 2 sheets: **Work Logs** (chi tiết, màu theo source) + **Summary** (thống kê)
 
 ### 🔹 AI Auto-Classify
 
-Khi AI Harness được bật, mỗi dòng trong bảng có nút **✨**:
-- Click ✨ → LLM phân tích title + description
+Khi AI Harness được bật, mỗi dòng trong bảng có **Classify** trong dropdown menu:
+- Click ✨ / Classify → LLM phân tích title + description
 - Tự động gợi ý: **activity type**, **thời gian ước lượng**, **tags**
 - Nếu confidence > 50% → tự động áp dụng vào database
 - **✨ Auto-Classify** (batch) — xử lý tất cả manual entries chưa phân loại
@@ -399,7 +492,7 @@ Description: "Debugging authentication issue with OAuth token refresh"
 
 ### 🔹 AI Generate Summary
 
-1. Click **📊 Generate Summary** trong AI toolbar
+1. Click **📊 Generate Summary** trong AI Harness panel
 2. Chọn date range (From → To)
 3. Click **✨ Generate**
 4. LLM tạo báo cáo bằng natural language:
@@ -409,7 +502,7 @@ Description: "Debugging authentication issue with OAuth token refresh"
 
 ### 🔹 AI Chat
 
-1. Click **💬 Ask AI** trong AI toolbar
+1. Click **💬 Ask AI** trong AI Harness panel
 2. Gõ câu hỏi bằng tiếng Việt hoặc English
 3. LLM trả lời dựa trên dữ liệu work logs
 
@@ -418,6 +511,35 @@ Description: "Debugging authentication issue with OAuth token refresh"
 - *"How many hours did I spend on meetings this week?"*
 - *"Tôi dành bao nhiêu thời gian cho PROJ-123?"*
 - *"What's my most common activity type?"*
+
+### 🔹 Poll Now
+
+- **Sync** button ở dashboard hero → trigger poll tất cả sources ngay lập tức
+- Hoặc **Sync** button ở table header
+- Hoặc **⌘+⇧+R** (Command Palette)
+- API trả về kết quả từng poller dạng toast notification
+
+---
+
+## 🔌 Tích hợp GitHub
+
+### Cấu hình (.env)
+
+```ini
+GITHUB_TOKEN=ghp_your-personal-access-token
+GITHUB_POLL_INTERVAL_MINUTES=5
+```
+
+**Tạo Token:** GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens (permissions: `Events: Read`, `Commits: Read`)
+
+### Cách hoạt động
+
+Poll REST API v3 mỗi N phút với dual strategy:
+
+1. **Events API** (`/users/{username}/events?per_page=100`) — lấy tất cả events gần đây
+2. **Search Commits API** (`/search/commits?author={username}&committer-date>{since}`) — fallback khi events không đủ
+
+Dedup bằng `external_id = f"github_commit_{sha}"` giúp không trùng lặp dữ liệu.
 
 ---
 
@@ -512,6 +634,12 @@ Mỗi lần commit → ghi JSON vào `~/.worklog_git_hooks.jsonl` → app đọc
 | `PATCH` | `/api/logs/{id}` | Cập nhật |
 | `DELETE` | `/api/logs/{id}` | Xoá |
 
+### Polling 🔄
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| `POST` | `/api/poll` | Trigger poll tất cả sources ngay lập tức |
+
 ### Settings ⚙️
 
 | Method | Endpoint | Mô tả |
@@ -556,6 +684,20 @@ Mỗi lần commit → ghi JSON vào `~/.worklog_git_hooks.jsonl` → app đọc
 |--------|----------|-------|
 | `GET` | `/api/export/excel` | Export toàn bộ |
 | `GET` | `/api/export/excel/{source}` | Export theo nguồn |
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **⌘K** / **Ctrl+K** | Mở Command Palette |
+| **⌘N** / **Ctrl+N** | Tạo manual entry mới |
+| **⌘E** / **Ctrl+E** | Export Excel |
+| **⌘,** / **Ctrl+,** | Mở Settings |
+| **Esc** | Đóng Command Palette |
+| **⌘⇧R** / **Ctrl+Shift+R** | Sync all sources (Poll Now) |
+| **⌘⌥D** / **Ctrl+Alt+D** | Toggle dark mode (trong command palette) |
 
 ---
 
