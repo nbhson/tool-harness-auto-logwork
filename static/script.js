@@ -123,6 +123,52 @@
     return div.innerHTML;
   }
 
+  // ─── Loading UI helpers ────────────────────────────
+
+  let _loadingStack = 0;
+
+  function showLoading(message = "Processing...") {
+    _loadingStack++;
+    const overlay = document.getElementById("loading-overlay");
+    const text = document.getElementById("loading-text");
+    if (overlay && text) {
+      text.textContent = message;
+      overlay.classList.add("active");
+    }
+  }
+
+  function hideLoading() {
+    _loadingStack = Math.max(0, _loadingStack - 1);
+    if (_loadingStack === 0) {
+      const overlay = document.getElementById("loading-overlay");
+      if (overlay) overlay.classList.remove("active");
+    }
+  }
+
+  async function withLoading(message, fn) {
+    showLoading(message);
+    try {
+      return await fn();
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function withButtonLoading(btn, loadingText, fn) {
+    const origText = btn.textContent;
+    const origDisabled = btn.disabled;
+    btn.disabled = true;
+    btn.textContent = loadingText;
+    btn.classList.add("btn-loading");
+    try {
+      return await fn();
+    } finally {
+      btn.disabled = origDisabled;
+      btn.textContent = origText;
+      btn.classList.remove("btn-loading");
+    }
+  }
+
   // ─── API calls ─────────────────────────────────────
 
   async function fetchLogs() {
@@ -384,14 +430,16 @@
       { key: "ai_model", value: document.getElementById("setting-ai-model").value },
     ];
 
-    try {
-      await saveSettings(items);
-      showToast("✅ AI settings saved!", "success");
-      closeSettingsModal();
-      await loadSettings();
-    } catch (err) {
-      showToast(`Error: ${err.message}`, "error");
-    }
+    await withButtonLoading(
+      document.getElementById("btn-save-settings"),
+      "⏳ Saving...",
+      async () => {
+        await saveSettings(items);
+        showToast("✅ AI settings saved!", "success");
+        closeSettingsModal();
+        await loadSettings();
+      }
+    );
   }
 
   async function testAIConnection() {
@@ -514,16 +562,14 @@
   // ─── AI Actions ────────────────────────────────────
 
   async function handleClassifySingle(logId) {
-    try {
+    await withLoading("✨ Classifying entry...", async () => {
       const result = await classifyLog(logId);
       showToast(
         `✨ Classified: "${result.category}" (${result.confidence * 100}% confidence)`,
         "success"
       );
       loadData();
-    } catch (err) {
-      showToast(`Error: ${err.message}`, "error");
-    }
+    });
   }
 
   async function classifyUnclassified() {
@@ -532,16 +578,18 @@
     btn.textContent = "⏳ Classifying...";
 
     try {
-      const result = await classifyBatch();
-      const count = result.results ? result.results.length : 0;
-      const highConf = result.results
-        ? result.results.filter((r) => r.confidence > 0.5).length
-        : 0;
-      showToast(
-        `✨ Classified ${count} entries (${highConf} with high confidence)`,
-        "success"
-      );
-      loadData();
+      await withLoading("✨ Auto-classifying entries...", async () => {
+        const result = await classifyBatch();
+        const count = result.results ? result.results.length : 0;
+        const highConf = result.results
+          ? result.results.filter((r) => r.confidence > 0.5).length
+          : 0;
+        showToast(
+          `✨ Classified ${count} entries (${highConf} with high confidence)`,
+          "success"
+        );
+        loadData();
+      });
     } catch (err) {
       showToast(`Error: ${err.message}`, "error");
     }
@@ -554,14 +602,12 @@
 
   async function handleEnhanceSingle(logId) {
     if (!confirm("🪄 AI Enhance this entry? (rewrite description + estimate time)")) return;
-    try {
+    await withLoading("🪄 Enhancing entry...", async () => {
       const res = await fetch(`/api/ai/enhance/${logId}`, { method: "POST" });
       if (!res.ok) throw new Error((await res.json()).detail || "Enhance failed");
       await loadData();
       showToast("✅ Entry enhanced!", "success");
-    } catch (err) {
-      showToast(`❌ ${err.message}`, "error");
-    }
+    });
   }
 
   async function enhanceBatch() {
@@ -570,7 +616,7 @@
     btn.disabled = true;
     btn.textContent = "⏳ Enhancing...";
     try {
-      const res = await fetch("/api/ai/enhance", { method: "POST" });
+      const res = await fetch("/api/ai/enhance", { method: "POST", headers: {"Content-Type": "application/json"}, body: "{}" });
       if (!res.ok) throw new Error((await res.json()).detail || "Enhance failed");
       await loadData();
       showToast("✅ Batch enhance complete!", "success");
@@ -829,30 +875,30 @@
       return;
     }
 
-    try {
-      if (editingId) {
-        await updateLog(editingId, data);
-        showToast("Work log updated successfully!", "success");
-      } else {
-        await createLog(data);
-        showToast("Work log added successfully!", "success");
+    await withButtonLoading(
+      document.getElementById("btn-save"),
+      "⏳ Saving...",
+      async () => {
+        if (editingId) {
+          await updateLog(editingId, data);
+          showToast("Work log updated successfully!", "success");
+        } else {
+          await createLog(data);
+          showToast("Work log added successfully!", "success");
+        }
+        closeManualModal();
+        loadData();
       }
-      closeManualModal();
-      loadData();
-    } catch (err) {
-      showToast(`Error: ${err.message}`, "error");
-    }
+    );
   }
 
   async function handleDelete(id) {
     if (!confirm("Delete this work log entry?")) return;
-    try {
+    await withLoading("Deleting...", async () => {
       await deleteLog(id);
       showToast("Work log deleted", "info");
       loadData();
-    } catch (err) {
-      showToast(`Error: ${err.message}`, "error");
-    }
+    });
   }
 
   function handleEdit(id) {
@@ -871,7 +917,7 @@
       ? `/api/export/excel/${source}`
       : `/api/export/excel`;
 
-    try {
+    await withLoading("📥 Exporting Excel...", async () => {
       const response = await fetch(url);
       if (!response.ok) throw new Error("Export failed");
 
@@ -887,9 +933,7 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
       showToast("Excel exported successfully!", "success");
-    } catch (err) {
-      showToast(`Export error: ${err.message}`, "error");
-    }
+    });
   }
 
   // ─── Filter handlers ───────────────────────────────
