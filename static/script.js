@@ -1,15 +1,13 @@
 /**
- * Work Log Harness — Frontend
+ * Work Log Harness — Frontend (Bootstrap 5)
  *
  * SPA với:
- * - Bảng work logs (filter, sort, paginate)
- * - Modal manual entry
+ * - Bảng work logs (filter, sort, paginate) — Bootstrap table
+ * - Modal manual entry + settings — Bootstrap Modal
  * - Export Excel
- * - ⚙️ AI Settings (provider, key, model)
- * - ✨ Auto-classify, 📊 Summary, 💬 Chat
- * - Auto-refresh
+ * - ✨ AI: classify, enhance, summary, chat
+ * - Auto-refresh 30s
  */
-
 (function () {
   "use strict";
 
@@ -30,6 +28,19 @@
 
   let editingId = null;
 
+  // ─── Bootstrap Modal instances ─────────────────────
+  let _manualModal = null;
+  let _settingsModal = null;
+
+  function getManualModal() {
+    if (!_manualModal) _manualModal = new bootstrap.Modal("#manual-modal");
+    return _manualModal;
+  }
+  function getSettingsModal() {
+    if (!_settingsModal) _settingsModal = new bootstrap.Modal("#settings-modal");
+    return _settingsModal;
+  }
+
   // ─── DOM refs ──────────────────────────────────────
 
   const $ = (sel) => document.querySelector(sel);
@@ -45,14 +56,11 @@
   const filterTo = $("#filter-to");
   const filterSearch = $("#filter-search");
 
-  const modalOverlay = $("#modal-overlay");
-  const modalTitle = $("#modal-title");
   const manualForm = $("#manual-form");
   const btnAddManual = $("#btn-add-manual");
   const btnCancel = $("#btn-cancel");
   const btnExport = $("#btn-export");
 
-  const settingsOverlay = $("#settings-modal-overlay");
   const settingsForm = $("#settings-form");
 
   const aiToolbar = $("#ai-toolbar");
@@ -66,7 +74,7 @@
     const container = $("#toast-container");
     if (!container) return;
     const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
+    toast.className = `toast-custom ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => {
@@ -92,26 +100,17 @@
   }
 
   function badgeClass(source) {
-    return `badge badge-${source}`;
+    return `source-badge sb-${source}`;
   }
 
   function activityTypeLabel(type) {
     const labels = {
-      ticket_update: "Update",
-      comment: "Comment",
-      estimation_change: "Estimation",
-      status_change: "Status",
-      worklog: "Worklog",
-      commit: "Commit",
-      push: "Push",
-      pr_create: "PR Create",
-      pr_merge: "PR Merge",
-      pr_comment: "PR Comment",
-      local_commit: "Local Commit",
-      meeting: "Meeting",
-      code_review: "Code Review",
-      research: "Research",
-      other: "Other",
+      ticket_update: "Update", comment: "Comment",
+      estimation_change: "Estimation", status_change: "Status",
+      worklog: "Worklog", commit: "Commit", push: "Push",
+      pr_create: "PR Create", pr_merge: "PR Merge", pr_comment: "PR Comment",
+      local_commit: "Local Commit", meeting: "Meeting",
+      code_review: "Code Review", research: "Research", other: "Other",
     };
     return labels[type] || type;
   }
@@ -155,16 +154,16 @@
   }
 
   async function withButtonLoading(btn, loadingText, fn) {
-    const origText = btn.textContent;
+    const origHTML = btn.innerHTML;
     const origDisabled = btn.disabled;
     btn.disabled = true;
-    btn.textContent = loadingText;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> ${loadingText}`;
     btn.classList.add("btn-loading");
     try {
       return await fn();
     } finally {
       btn.disabled = origDisabled;
-      btn.textContent = origText;
+      btn.innerHTML = origHTML;
       btn.classList.remove("btn-loading");
     }
   }
@@ -172,17 +171,21 @@
   // ─── Panel toggles ───────────────────────────────
 
   function toggleFilterPanel() {
-    const panel = document.getElementById("filter-panel");
+    const body = document.getElementById("filter-body");
     const toggle = document.getElementById("filter-toggle");
-    panel.classList.toggle("collapsed");
-    toggle.textContent = panel.classList.contains("collapsed") ? "▶" : "▼";
+    if (!body || !toggle) return;
+    const isHidden = body.classList.contains("d-none");
+    body.classList.toggle("d-none");
+    toggle.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
   }
 
   function toggleAIPanel() {
-    const panel = document.getElementById("ai-toolbar");
+    const body = document.getElementById("ai-body");
     const toggle = document.getElementById("ai-toggle");
-    panel.classList.toggle("collapsed");
-    toggle.textContent = panel.classList.contains("collapsed") ? "▶" : "▼";
+    if (!body || !toggle) return;
+    const isHidden = body.classList.contains("d-none");
+    body.classList.toggle("d-none");
+    toggle.style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
   }
 
   // ─── API calls ─────────────────────────────────────
@@ -199,7 +202,6 @@
     if (state.dateFrom) params.set("from", state.dateFrom);
     if (state.dateTo) params.set("to", state.dateTo);
     if (state.search) params.set("search", state.search);
-
     const res = await fetch(`/api/logs?${params}`);
     if (!res.ok) throw new Error("Failed to fetch logs");
     return res.json();
@@ -319,31 +321,31 @@
     openai: {
       base_url: "https://api.openai.com/v1",
       model: "gpt-4o",
-      key_hint: "Get key at platform.openai.com/api-keys",
+      key_hint: 'Get key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>',
       model_hint: "Models: gpt-4o, gpt-4o-mini, gpt-4-turbo",
     },
     gemini: {
       base_url: "https://generativelanguage.googleapis.com/v1beta/openai/",
       model: "gemini-2.0-flash",
-      key_hint: "Get free API key at aistudio.google.com/apikey",
+      key_hint: 'Get free API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>',
       model_hint: "Models: gemini-2.0-flash, gemini-2.5-pro, gemini-1.5-pro",
     },
     anthropic: {
       base_url: "https://api.anthropic.com/v1",
       model: "claude-sonnet-4-20250514",
-      key_hint: "Get key at console.anthropic.com",
-      model_hint: "Models: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022",
+      key_hint: 'Get key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>',
+      model_hint: `Models: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022`,
     },
     openrouter: {
       base_url: "https://openrouter.ai/api/v1",
       model: "openai/gpt-4o",
-      key_hint: "Get key at openrouter.ai/keys",
+      key_hint: 'Get key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a>',
       model_hint: "Thousands of models available",
     },
     deepseek: {
       base_url: "https://api.deepseek.com",
       model: "deepseek-chat",
-      key_hint: "Get key at platform.deepseek.com",
+      key_hint: 'Get key at <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a>',
       model_hint: "Models: deepseek-chat, deepseek-reasoner",
     },
     custom: {
@@ -359,7 +361,6 @@
     const preset = PROVIDER_PRESETS[provider];
     if (!preset) return;
 
-    // Only auto-fill if fields are empty or user hasn't customized
     const urlField = document.getElementById("setting-ai-base-url");
     if (!urlField.value || Object.keys(PROVIDER_PRESETS).some(
       (p) => PROVIDER_PRESETS[p].base_url === urlField.value
@@ -375,25 +376,21 @@
     }
 
     const hint = document.getElementById("ai-key-hint");
-    if (hint && preset.key_hint) {
-      hint.innerHTML = preset.key_hint;
-    }
+    if (hint && preset.key_hint) hint.innerHTML = preset.key_hint;
 
     const modelHint = document.getElementById("ai-model-hint");
-    if (modelHint && preset.model_hint) {
-      modelHint.textContent = preset.model_hint;
-    }
+    if (modelHint && preset.model_hint) modelHint.textContent = preset.model_hint;
   }
 
   function toggleApiKeyVisibility() {
     const keyField = document.getElementById("setting-ai-api-key");
-    const btn = document.getElementById("btn-toggle-key");
+    const icon = document.querySelector("#btn-toggle-key i");
     if (keyField.type === "password") {
       keyField.type = "text";
-      btn.textContent = "🙈";
+      icon.className = "bi bi-eye-slash";
     } else {
       keyField.type = "password";
-      btn.textContent = "👁️";
+      icon.className = "bi bi-eye";
     }
   }
 
@@ -402,22 +399,14 @@
       const data = await fetchSettings();
       const s = data.settings || {};
 
-      // Populate form
-      document.getElementById("setting-ai-enabled").value =
-        s.ai_enabled || "false";
-      document.getElementById("setting-ai-provider").value =
-        s.ai_provider || "openai";
-      document.getElementById("setting-ai-api-key").value =
-        s.ai_api_key || "";
-      document.getElementById("setting-ai-base-url").value =
-        s.ai_base_url || "";
-      document.getElementById("setting-ai-model").value =
-        s.ai_model || "";
+      document.getElementById("setting-ai-enabled").value = s.ai_enabled || "false";
+      document.getElementById("setting-ai-provider").value = s.ai_provider || "openai";
+      document.getElementById("setting-ai-api-key").value = s.ai_api_key || "";
+      document.getElementById("setting-ai-base-url").value = s.ai_base_url || "";
+      document.getElementById("setting-ai-model").value = s.ai_model || "";
 
-      // Update hints
       onProviderChange();
 
-      // Update UI state
       state.aiEnabled = s.ai_enabled === "true" && !!s.ai_api_key;
       updateAIUI();
     } catch (err) {
@@ -427,7 +416,7 @@
 
   function updateAIUI() {
     if (state.aiEnabled) {
-      aiToolbar.style.display = "flex";
+      aiToolbar.style.display = "block";
       aiBadge.style.display = "inline-block";
     } else {
       aiToolbar.style.display = "none";
@@ -448,11 +437,11 @@
 
     await withButtonLoading(
       document.getElementById("btn-save-settings"),
-      "⏳ Saving...",
+      "Saving...",
       async () => {
         await saveSettings(items);
         showToast("✅ AI settings saved!", "success");
-        closeSettingsModal();
+        getSettingsModal().hide();
         await loadSettings();
       }
     );
@@ -462,10 +451,11 @@
     const btn = document.getElementById("btn-test-ai");
     const result = document.getElementById("ai-test-result");
     const modelStatus = document.getElementById("model-load-status");
+
     btn.disabled = true;
-    btn.textContent = "⏳ Testing...";
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
     result.textContent = "";
-    result.style.color = "var(--text-secondary)";
+    result.style.color = "#64748b";
     if (modelStatus) modelStatus.textContent = "";
 
     const data = {
@@ -479,21 +469,19 @@
       result.textContent = "⚠️ Please enter an API key first";
       result.style.color = "#dc3545";
       btn.disabled = false;
-      btn.textContent = "🔌 Test Connection & Load Models";
+      btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test Connection & Load Models';
       return;
     }
 
     try {
       const res = await testConnection(data);
       if (res.status === "success") {
-        // Build status message — chat test optional, models list is the key
         const connMsg = res.models && res.models.length > 0
           ? `✅ Connected! Found ${res.models.length} models`
           : `✅ Connected!${res.response ? ` Response: "${res.response}"` : ""}`;
         result.textContent = connMsg;
         result.style.color = "#28a745";
 
-        // Populate model dropdown if available
         if (res.models && res.models.length > 0) {
           populateModelDropdown(res.models, res.suggested_model);
           if (modelStatus) {
@@ -503,13 +491,12 @@
         } else {
           if (modelStatus) {
             modelStatus.textContent = "ℹ️ No models list available. You can type the model name manually.";
-            modelStatus.style.color = "var(--text-secondary)";
+            modelStatus.style.color = "#64748b";
           }
         }
       } else {
         result.textContent = `❌ ${res.message || "Connection failed"}`;
         result.style.color = "#dc3545";
-        // On failure, keep text input
         restoreModelInput();
       }
     } catch (err) {
@@ -519,49 +506,42 @@
     }
 
     btn.disabled = false;
-    btn.textContent = "🔌 Test Connection & Load Models";
+    btn.innerHTML = '<i class="bi bi-plug me-1"></i>Test Connection & Load Models';
   }
 
   function populateModelDropdown(models, suggested) {
     const wrapper = document.getElementById("model-input-wrapper");
     const currentVal = document.getElementById("setting-ai-model").value;
 
-    // Replace text input with select dropdown
-    let html = '<select class="form-control" id="setting-ai-model">';
+    let html = '<select class="form-select" id="setting-ai-model">';
     let hasMatch = false;
     for (const m of models) {
-      const selected =
-        m.id === suggested || m.id === currentVal ? "selected" : "";
+      const selected = m.id === suggested || m.id === currentVal ? "selected" : "";
       if (selected) hasMatch = true;
       const label = m.owned_by ? `${m.id} (${m.owned_by})` : m.id;
       html += `<option value="${m.id}" ${selected}>${label}</option>`;
     }
-    // Add custom option
-    html += `<option value="__custom__">✦ Custom model...</option>`;
+    html += '<option value="__custom__">✦ Custom model...</option>';
     html += "</select>";
 
     wrapper.innerHTML = html;
 
-    // Handle "Custom model..." selection
     const select = document.getElementById("setting-ai-model");
     select.addEventListener("change", function () {
       if (this.value === "__custom__") {
         const manual = prompt("Enter model name:");
         if (manual) {
-          // Add the custom option and select it
           const opt = document.createElement("option");
           opt.value = manual;
           opt.textContent = `✦ ${manual}`;
           opt.selected = true;
           this.insertBefore(opt, this.querySelector('[value="__custom__"]'));
         } else {
-          // Revert to first option
           this.selectedIndex = 0;
         }
       }
     });
 
-    // Update model hint
     const hint = document.getElementById("ai-model-hint");
     if (hint) {
       hint.textContent = `✅ ${models.length} models loaded from API. Select or choose "Custom model..." to type manually.`;
@@ -581,7 +561,7 @@
     await withLoading("✨ Classifying entry...", async () => {
       const result = await classifyLog(logId);
       showToast(
-        `✨ Classified: "${result.category}" (${result.confidence * 100}% confidence)`,
+        `✨ Classified: "${result.category}" (${Math.round(result.confidence * 100)}% confidence)`,
         "success"
       );
       loadData();
@@ -591,7 +571,7 @@
   async function classifyUnclassified() {
     const btn = document.getElementById("btn-ai-classify");
     btn.disabled = true;
-    btn.textContent = "⏳ Classifying...";
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Classifying...';
 
     try {
       await withLoading("✨ Auto-classifying entries...", async () => {
@@ -600,10 +580,7 @@
         const highConf = result.results
           ? result.results.filter((r) => r.confidence > 0.5).length
           : 0;
-        showToast(
-          `✨ Classified ${count} entries (${highConf} with high confidence)`,
-          "success"
-        );
+        showToast(`✨ Classified ${count} entries (${highConf} with high confidence)`, "success");
         loadData();
       });
     } catch (err) {
@@ -611,10 +588,8 @@
     }
 
     btn.disabled = false;
-    btn.textContent = "✨ Auto-Classify";
+    btn.innerHTML = '<i class="bi bi-magic me-1"></i>Auto-Classify';
   }
-
-  // ─── AI Enhance ──────────────────────────────────────
 
   async function handleEnhanceSingle(logId) {
     if (!confirm("🪄 AI Enhance this entry? (rewrite description + estimate time)")) return;
@@ -627,10 +602,10 @@
   }
 
   async function enhanceBatch() {
-    const btn = document.getElementById("btn-ai-classify");
+    const btn = document.getElementById("btn-ai-enhance");
     if (!btn) return;
     btn.disabled = true;
-    btn.textContent = "⏳ Enhancing...";
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enhancing...';
     try {
       const res = await fetch("/api/ai/enhance", { method: "POST", headers: {"Content-Type": "application/json"}, body: "{}" });
       if (!res.ok) throw new Error((await res.json()).detail || "Enhance failed");
@@ -640,19 +615,18 @@
       showToast(`❌ ${err.message}`, "error");
     } finally {
       btn.disabled = false;
-      btn.textContent = "🪄 Auto-Enhance";
+      btn.innerHTML = '<i class="bi bi-wand me-1"></i>Auto-Enhance';
     }
   }
 
   function openSummaryPanel() {
     summaryPanel.style.display = "block";
-    // Set default date range
     const today = new Date().toISOString().slice(0, 10);
     const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
     document.getElementById("summary-from").value = weekAgo;
     document.getElementById("summary-to").value = today;
     document.getElementById("summary-result").innerHTML =
-      '<div class="summary-placeholder">Click Generate to create AI summary.</div>';
+      '<span class="text-muted fst-italic">Click Generate to create AI summary.</span>';
     summaryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -662,7 +636,7 @@
 
   async function generateSummary() {
     const resultDiv = document.getElementById("summary-result");
-    resultDiv.innerHTML = '<div class="spinner"></div> Generating...';
+    resultDiv.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div> Generating...';
 
     const from = document.getElementById("summary-from").value;
     const to = document.getElementById("summary-to").value;
@@ -733,10 +707,10 @@
       tableBody.innerHTML = `
         <tr>
           <td colspan="8">
-            <div class="empty-state">
-              <div class="empty-icon">📋</div>
-              <h3>No work logs yet</h3>
-              <p>Configure Jira/Bitbucket in .env or add manual entries.</p>
+            <div class="text-center py-5">
+              <div style="font-size:48px;margin-bottom:8px">📋</div>
+              <h5 class="fw-semibold">No work logs yet</h5>
+              <p class="text-muted">Configure Jira/Bitbucket in .env or add manual entries.</p>
             </div>
           </td>
         </tr>`;
@@ -749,21 +723,27 @@
       .map(
         (log) => `
       <tr>
-        <td><span class="${badgeClass(log.source)}">${log.source}</span></td>
-        <td><span class="activity-badge">${activityTypeLabel(log.activity_type)}</span></td>
+        <td><span class="${badgeClass(log.source)}">${escapeHtml(log.source)}</span></td>
+        <td><span class="type-badge">${activityTypeLabel(log.activity_type)}</span></td>
         <td class="cell-title">
-          ${log.url ? `<a href="${log.url}" target="_blank" title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</a>` : `<span title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</span>`}
-          ${log.description ? `<div class="cell-desc" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>` : ""}
+          ${log.url
+            ? `<a href="${escapeHtml(log.url)}" target="_blank" title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</a>`
+            : `<span title="${escapeHtml(log.title)}">${escapeHtml(log.title)}</span>`}
+          ${log.description
+            ? `<div class="cell-desc" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>`
+            : ""}
         </td>
         <td>${escapeHtml(log.project || "-")}</td>
-        <td class="cell-date">${formatDate(log.activity_timestamp)}</td>
-        <td class="cell-time${log.time_spent_minutes ? ' has-value' : ''}">${formatTime(log.time_spent_minutes)}</td>
-        <td>${log.external_id ? `<code style="font-size:11px;color:var(--text-secondary)">${escapeHtml(log.external_id.substring(0, 30))}</code>` : "-"}</td>
-        <td class="cell-actions">
-          ${state.aiEnabled ? `<button class="btn btn-sm btn-ai" onclick="handleClassifySingle(${log.id})" title="AI Classify">✨</button>
-          <button class="btn btn-sm btn-ai" onclick="handleEnhanceSingle(${log.id})" title="AI Enhance">🪄</button>` : ""}
-          <button class="btn btn-sm btn-outline" onclick="handleEdit(${log.id})" title="Edit">✏️</button>
-          <button class="btn btn-sm btn-danger" onclick="handleDelete(${log.id})" title="Delete">🗑️</button>
+        <td class="cell-date"><span class="text-muted" style="white-space:nowrap;font-size:12px">${formatDate(log.activity_timestamp)}</span></td>
+        <td class="cell-time${log.time_spent_minutes ? " has-value" : ""}">${formatTime(log.time_spent_minutes)}</td>
+        <td>${log.external_id ? `<code class="text-muted" style="font-size:11px">${escapeHtml(log.external_id.substring(0, 30))}</code>` : '<span class="text-muted">-</span>'}</td>
+        <td class="text-nowrap" style="white-space:nowrap">
+          ${state.aiEnabled
+            ? `<button class="btn btn-sm btn-ai-classify" onclick="handleClassifySingle(${log.id})" title="AI Classify"><span class="badge rounded-pill bg-white text-primary p-0" style="font-size:12px">✨</span></button>
+               <button class="btn btn-sm btn-ai-enhance" onclick="handleEnhanceSingle(${log.id})" title="AI Enhance"><span class="badge rounded-pill bg-white text-primary p-0" style="font-size:12px">🪄</span></button>`
+            : ""}
+          <button class="btn btn-sm btn-outline-secondary border-0" onclick="handleEdit(${log.id})" title="Edit"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm btn-outline-secondary border-0 text-danger" onclick="handleDelete(${log.id})" title="Delete"><i class="bi bi-trash"></i></button>
         </td>
       </tr>`
       )
@@ -779,11 +759,18 @@
   function renderPagination(total) {
     const totalPages = Math.ceil(total / state.pageSize);
     if (totalPages <= 1) {
-      pagination.innerHTML = "";
+      pagination.innerHTML = '<div class="text-muted text-center" style="font-size:12px">All entries shown</div>';
       return;
     }
 
-    let html = `<button onclick="window.__goPage(${state.page - 1})" ${state.page <= 1 ? "disabled" : ""}>‹ Prev</button>`;
+    let html = '<ul class="pagination pagination-sm justify-content-center mb-0">';
+
+    // Prev
+    html += `<li class="page-item ${state.page <= 1 ? "disabled" : ""}">
+      <a class="page-link" href="#" onclick="window.__goPage(${state.page - 1});return false;" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+      </a>
+    </li>`;
 
     const maxVisible = 5;
     let startPage = Math.max(1, state.page - Math.floor(maxVisible / 2));
@@ -793,20 +780,29 @@
     }
 
     if (startPage > 1) {
-      html += `<button onclick="window.__goPage(1)">1</button>`;
-      if (startPage > 2) html += `<span style="padding:4px 6px">…</span>`;
+      html += `<li class="page-item"><a class="page-link" href="#" onclick="window.__goPage(1);return false;">1</a></li>`;
+      if (startPage > 2) html += '<li class="page-item disabled"><a class="page-link" href="#">&hellip;</a></li>';
     }
 
     for (let i = startPage; i <= endPage; i++) {
-      html += `<button onclick="window.__goPage(${i})" class="${i === state.page ? "active" : ""}">${i}</button>`;
+      html += `<li class="page-item ${i === state.page ? "active" : ""}">
+        <a class="page-link" href="#" onclick="window.__goPage(${i});return false;">${i}</a>
+      </li>`;
     }
 
     if (endPage < totalPages) {
-      if (endPage < totalPages - 1) html += `<span style="padding:4px 6px">…</span>`;
-      html += `<button onclick="window.__goPage(${totalPages})">${totalPages}</button>`;
+      if (endPage < totalPages - 1) html += '<li class="page-item disabled"><a class="page-link" href="#">&hellip;</a></li>';
+      html += `<li class="page-item"><a class="page-link" href="#" onclick="window.__goPage(${totalPages});return false;">${totalPages}</a></li>`;
     }
 
-    html += `<button onclick="window.__goPage(${state.page + 1})" ${state.page >= totalPages ? "disabled" : ""}>Next ›</button>`;
+    // Next
+    html += `<li class="page-item ${state.page >= totalPages ? "disabled" : ""}">
+      <a class="page-link" href="#" onclick="window.__goPage(${state.page + 1});return false;" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </a>
+    </li>`;
+
+    html += "</ul>";
     pagination.innerHTML = html;
   }
 
@@ -837,7 +833,7 @@
 
   function openModal(editData = null) {
     editingId = editData ? editData.id : null;
-    modalTitle.textContent = editData ? "Edit Work Log" : "Add Manual Entry";
+    document.getElementById("modal-title").textContent = editData ? "Edit Work Log" : "Add Manual Entry";
 
     if (editData) {
       document.getElementById("entry-title").value = editData.title || "";
@@ -848,10 +844,8 @@
       document.getElementById("entry-date").value = editData.activity_timestamp
         ? new Date(editData.activity_timestamp).toISOString().slice(0, 16)
         : new Date().toISOString().slice(0, 16);
-      document.getElementById("entry-hours").value =
-        editData.time_spent_minutes ? Math.floor(editData.time_spent_minutes / 60) : 0;
-      document.getElementById("entry-minutes").value =
-        editData.time_spent_minutes ? editData.time_spent_minutes % 60 : 0;
+      document.getElementById("entry-hours").value = editData.time_spent_minutes ? Math.floor(editData.time_spent_minutes / 60) : 0;
+      document.getElementById("entry-minutes").value = editData.time_spent_minutes ? editData.time_spent_minutes % 60 : 0;
     } else {
       manualForm.reset();
       document.getElementById("entry-date").value = new Date().toISOString().slice(0, 16);
@@ -859,13 +853,11 @@
       document.getElementById("entry-minutes").value = 0;
     }
 
-    modalOverlay.classList.add("active");
-    document.body.style.overflow = "hidden";
+    getManualModal().show();
   }
 
   function closeManualModal() {
-    modalOverlay.classList.remove("active");
-    document.body.style.overflow = "";
+    getManualModal().hide();
     editingId = null;
   }
 
@@ -893,14 +885,14 @@
 
     await withButtonLoading(
       document.getElementById("btn-save"),
-      "⏳ Saving...",
+      "Saving...",
       async () => {
         if (editingId) {
           await updateLog(editingId, data);
-          showToast("Work log updated successfully!", "success");
+          showToast("✅ Work log updated successfully!", "success");
         } else {
           await createLog(data);
-          showToast("Work log added successfully!", "success");
+          showToast("✅ Work log added successfully!", "success");
         }
         closeManualModal();
         loadData();
@@ -929,9 +921,7 @@
   }
 
   async function handleExport(source = "") {
-    const url = source
-      ? `/api/export/excel/${source}`
-      : `/api/export/excel`;
+    const url = source ? `/api/export/excel/${source}` : `/api/export/excel`;
 
     await withLoading("📥 Exporting Excel...", async () => {
       const response = await fetch(url);
@@ -948,7 +938,7 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
-      showToast("Excel exported successfully!", "success");
+      showToast("✅ Excel exported successfully!", "success");
     });
   }
 
@@ -977,14 +967,12 @@
   // ─── Modal helpers ─────────────────────────────────
 
   function openSettingsModal() {
-    settingsOverlay.classList.add("active");
-    document.body.style.overflow = "hidden";
+    getSettingsModal().show();
     loadSettings();
   }
 
   function closeSettingsModal() {
-    settingsOverlay.classList.remove("active");
-    document.body.style.overflow = "";
+    getSettingsModal().hide();
   }
 
   // ─── Expose globals (for onclick) ──────────────────
@@ -1029,13 +1017,11 @@
   function init() {
     if (_initialized) return;
     _initialized = true;
-    // Load settings first (to show/hide AI toolbar)
-    loadSettings();
 
-    // Load data
+    loadSettings();
     loadData();
 
-    // Event listeners
+    // Filter events
     filterSource.addEventListener("change", applyFilters);
     filterType.addEventListener("change", applyFilters);
     filterFrom.addEventListener("change", applyFilters);
@@ -1048,21 +1034,11 @@
     });
 
     btnAddManual.addEventListener("click", () => openModal());
-
     btnCancel.addEventListener("click", closeManualModal);
-
-    modalOverlay.addEventListener("click", (e) => {
-      if (e.target === modalOverlay) closeManualModal();
-    });
-
-    settingsOverlay.addEventListener("click", (e) => {
-      if (e.target === settingsOverlay) closeSettingsModal();
-    });
-
     manualForm.addEventListener("submit", handleFormSubmit);
     settingsForm.addEventListener("submit", handleSettingsSave);
 
-    // Chat: Enter to send + button click
+    // Chat
     document.getElementById("chat-input").addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -1074,21 +1050,10 @@
       sendChatMessage();
     });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        closeManualModal();
-        closeSettingsModal();
-      }
-    });
-
-    // Export buttons
+    // Export
     btnExport.addEventListener("click", () => handleExport(""));
-
     document.querySelectorAll("[data-export-source]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const source = btn.dataset.exportSource;
-        handleExport(source);
-      });
+      btn.addEventListener("click", () => handleExport(btn.dataset.exportSource));
     });
 
     // Sortable headers
@@ -1096,7 +1061,7 @@
       th.addEventListener("click", () => handleSort(th.dataset.sort));
     });
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh
     setInterval(loadData, 30000);
   }
 

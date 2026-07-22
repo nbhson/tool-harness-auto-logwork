@@ -4,386 +4,408 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Work Log Harness</title>
-  <link rel="stylesheet" href="/static/style.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+
+  <!-- Bootstrap 5 + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>" />
+
+  <link href="/static/style.css" rel="stylesheet" />
 </head>
 <body>
-  <div class="bg-pattern"></div>
 
-  <!-- ═══ Header ═══════════════════════════════════ -->
-  <header class="header">
-    <div class="header-left">
-      <div class="header-icon">🤖</div>
-      <h1>Work Log Harness</h1>
-      <span id="ai-enabled-badge" class="ai-badge" style="display:none" title="AI Harness is active">✨ AI Active</span>
+<div class="d-flex">
+  <!-- ═══ Sidebar ═══════════════════════════════════ -->
+  <aside class="app-sidebar">
+    <div class="brand d-flex align-items-center gap-2">
+      <span style="font-size:28px">🤖</span>
+      <div>
+        <h5>Work Log</h5>
+        <small>Harness Dashboard</small>
+      </div>
     </div>
-    <div class="header-right">
-      <div class="header-status">
-        <span class="status-dot active" id="status-dot"></span>
+    <nav class="flex-column mt-2">
+      <a class="nav-link active" href="#"><i class="bi bi-grid-fill"></i> Dashboard</a>
+      <a class="nav-link" href="#" onclick="document.getElementById('btn-add-manual').click()"><i class="bi bi-plus-circle"></i> Add Entry</a>
+      <a class="nav-link" href="#" onclick="window.__refreshPage()"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
+      <a class="nav-link" href="#" onclick="openSettingsModal()"><i class="bi bi-gear"></i> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="d-flex align-items-center gap-2">
+        <span class="status-dot" style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 6px rgba(52,211,153,0.6);animation:pulse-dot 2s infinite;" id="status-dot"></span>
         <span id="poller-status">Pollers active</span>
-      </div>
-      <button class="header-btn" onclick="window.__refreshPage()" title="Refresh">🔄</button>
-      <button class="header-btn" onclick="openSettingsModal()" title="AI Harness Settings">⚙️</button>
+      </span>
+      <style>@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.5} }</style>
     </div>
-  </header>
+  </aside>
 
-  <!-- ═══ Container ════════════════════════════════ -->
-  <main class="container">
+  <!-- ═══ Main ═══════════════════════════════════════ -->
+  <main class="app-main flex-grow-1">
 
-    <!-- Stats -->
-    <section class="stats-section">
-      <div class="stats-section-title">📊 Overview</div>
-      <div class="stats-bar">
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Total Logs</span>
-            <span class="stat-icon">📋</span>
-          </div>
-          <div class="stat-value" id="stat-total">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Total Time</span>
-            <span class="stat-icon">⏱️</span>
-          </div>
-          <div class="stat-value" id="stat-time">—</div>
-          <div class="stat-sub">all time</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">Today</span>
-            <span class="stat-icon">🌞</span>
-          </div>
-          <div class="stat-value" id="stat-today">—</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-header">
-            <span class="stat-label">This Week</span>
-            <span class="stat-icon">📅</span>
-          </div>
-          <div class="stat-value" id="stat-week">—</div>
-        </div>
-        <div class="stat-card source-github">
-          <div class="stat-header">
-            <span class="stat-label">🐙 GitHub</span>
-          </div>
-          <div class="stat-value" id="stat-github">—</div>
-        </div>
-        <div class="stat-card source-jira">
-          <div class="stat-header">
-            <span class="stat-label">🔵 Jira</span>
-          </div>
-          <div class="stat-value" id="stat-jira">—</div>
-        </div>
-        <div class="stat-card source-bitbucket">
-          <div class="stat-header">
-            <span class="stat-label">🟢 Bitbucket</span>
-          </div>
-          <div class="stat-value" id="stat-bitbucket">—</div>
-        </div>
-        <div class="stat-card source-git">
-          <div class="stat-header">
-            <span class="stat-label">🟡 Git</span>
-          </div>
-          <div class="stat-value" id="stat-git">—</div>
-        </div>
-        <div class="stat-card source-manual">
-          <div class="stat-header">
-            <span class="stat-label">🔴 Manual</span>
-          </div>
-          <div class="stat-value" id="stat-manual">—</div>
-        </div>
+    <!-- Top Bar -->
+    <div class="app-topbar">
+      <div class="d-flex align-items-center gap-3">
+        <h4><i class="bi bi-grid-fill me-2 text-primary"></i>Dashboard</h4>
+        <span id="ai-enabled-badge" class="ai-badge-glow" style="display:none">✨ AI Active</span>
       </div>
-    </section>
-
-    <!-- Panel: Filters -->
-    <div class="panel" id="filter-panel">
-      <div class="panel-header" onclick="toggleFilterPanel()">
-        <span class="panel-title">🔍 Filters</span>
-        <span class="panel-toggle" id="filter-toggle">▼</span>
-      </div>
-      <div class="panel-body" id="filter-body">
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label for="filter-source">Source</label>
-            <select id="filter-source">
-              <option value="">All</option>
-              <option value="jira">🔵 Jira</option>
-              <option value="bitbucket">🟢 Bitbucket</option>
-              <option value="github">🐙 GitHub</option>
-              <option value="git">🟡 Git</option>
-              <option value="manual">🔴 Manual</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="filter-type">Type</label>
-            <select id="filter-type">
-              <option value="">All</option>
-              <option value="ticket_update">Ticket Update</option>
-              <option value="comment">Comment</option>
-              <option value="estimation_change">Estimation</option>
-              <option value="status_change">Status</option>
-              <option value="commit">Commit</option>
-              <option value="push">Push</option>
-              <option value="pr_create">PR Create</option>
-              <option value="pr_merge">PR Merge</option>
-              <option value="local_commit">Local Commit</option>
-              <option value="meeting">Meeting</option>
-              <option value="code_review">Code Review</option>
-              <option value="research">Research</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="filter-from">From</label>
-            <input type="date" id="filter-from" />
-          </div>
-          <div class="filter-group">
-            <label for="filter-to">To</label>
-            <input type="date" id="filter-to" />
-          </div>
-          <input type="search" id="filter-search" class="search-input" placeholder="🔍 Search title / description..." />
-        </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-dark border px-3 py-2" style="font-weight:400;font-size:12px">
+          <span class="status-dot" style="width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;box-shadow:0 0 6px rgba(52,211,153,0.6);"></span>
+          System Online
+        </span>
+        <button class="btn btn-sm btn-outline-secondary border-0" onclick="window.__refreshPage()" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-outline-secondary border-0" onclick="openSettingsModal()" title="Settings"><i class="bi bi-gear"></i></button>
       </div>
     </div>
 
-    <!-- Action Bar -->
-    <div class="action-bar">
-      <span class="action-bar-label">Actions</span>
-      <button class="btn btn-primary" id="btn-add-manual">➕ Add Entry</button>
-      <button class="btn btn-success" id="btn-export">📥 Export Excel</button>
-      <span class="action-bar-divider"></span>
-      <button class="btn btn-ghost btn-sm" data-export-source="jira">Jira</button>
-      <button class="btn btn-ghost btn-sm" data-export-source="bitbucket">Bitbucket</button>
-      <button class="btn btn-ghost btn-sm" data-export-source="github">🐙 GitHub</button>
-      <button class="btn btn-ghost btn-sm" data-export-source="git">Git</button>
-      <button class="btn btn-ghost btn-sm" data-export-source="manual">Manual</button>
-    </div>
+    <!-- Content -->
+    <div class="app-content">
 
-    <!-- Panel: AI Tools -->
-    <div class="panel" id="ai-toolbar" style="display:none">
-      <div class="panel-header" onclick="toggleAIPanel()">
-        <span class="panel-title">🤖 AI Harness</span>
-        <span class="panel-toggle" id="ai-toggle">▼</span>
-      </div>
-      <div class="panel-body" id="ai-body">
-        <div class="ai-toolbar">
-          <span class="ai-toolbar-label">AI Tools</span>
-          <button class="btn btn-ai" id="btn-ai-classify" onclick="classifyUnclassified()">✨ Auto-Classify</button>
-          <button class="btn btn-ai" onclick="enhanceBatch()">🪄 Auto-Enhance</button>
-          <button class="btn btn-ai" onclick="openSummaryPanel()">📊 Generate Summary</button>
-          <button class="btn btn-ai" onclick="toggleChatPanel()">💬 Ask AI</button>
-          <a href="/api/settings" target="_blank" class="btn btn-ghost btn-sm" style="margin-left:auto">🔌 API</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ Summary Panel ══════════════════════════ -->
-    <section class="summary-panel" id="summary-panel" style="display:none">
-      <div class="summary-panel-header">
-        <span>📊 AI Summary</span>
-        <button class="modal-close" onclick="closeSummaryPanel()">&times;</button>
-      </div>
-      <div class="summary-panel-body">
-        <div class="form-row" style="margin-bottom:10px">
-          <div class="form-group" style="margin:0">
-            <label>From</label>
-            <input type="date" class="form-control" id="summary-from" />
-          </div>
-          <div class="form-group" style="margin:0">
-            <label>To</label>
-            <input type="date" class="form-control" id="summary-to" />
-          </div>
-          <div class="form-group" style="margin:0;display:flex;align-items:flex-end">
-            <button class="btn btn-ai" onclick="generateSummary()">✨ Generate</button>
+      <!-- Stats -->
+      <div class="row g-2 mb-3" id="stats-row">
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-primary"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label">Total Logs</div><div class="stat-value" id="stat-total">—</div></div>
+              <span class="stat-icon"><i class="bi bi-journal-text"></i></span>
+            </div>
           </div>
         </div>
-        <div id="summary-result" class="summary-content">
-          <div class="summary-placeholder">Select date range and click Generate.</div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-primary"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label">Total Time</div><div class="stat-value" id="stat-time">—</div><small class="text-muted" style="font-size:11px">all time</small></div>
+              <span class="stat-icon"><i class="bi bi-clock-history"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-primary"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label">Today</div><div class="stat-value" id="stat-today">—</div></div>
+              <span class="stat-icon"><i class="bi bi-sun"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-primary"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label">This Week</div><div class="stat-value" id="stat-week">—</div></div>
+              <span class="stat-icon"><i class="bi bi-calendar-week"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-github"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label"><i class="bi bi-github"></i> GitHub</div><div class="stat-value" id="stat-github">—</div></div>
+              <span class="stat-icon"><i class="bi bi-github"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-jira"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label"><i class="bi bi-at"></i> Jira</div><div class="stat-value" id="stat-jira">—</div></div>
+              <span class="stat-icon"><i class="bi bi-at"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-bitbucket"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label"><i class="bi bi-gitlab"></i> Bitbucket</div><div class="stat-value" id="stat-bitbucket">—</div></div>
+              <span class="stat-icon"><i class="bi bi-gitlab"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-git"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label"><i class="bi bi-git"></i> Git</div><div class="stat-value" id="stat-git">—</div></div>
+              <span class="stat-icon"><i class="bi bi-git"></i></span>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg">
+          <div class="stat-card"><div class="stat-bar bar-manual"></div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div><div class="stat-label"><i class="bi bi-pencil-square"></i> Manual</div><div class="stat-value" id="stat-manual">—</div></div>
+              <span class="stat-icon"><i class="bi bi-pencil-square"></i></span>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- ═══ Chat Panel ══════════════════════════════ -->
-    <section class="chat-panel" id="chat-panel" style="display:none">
-      <div class="chat-panel-header">
-        <span>💬 Ask AI about your work logs</span>
-        <button class="modal-close" onclick="toggleChatPanel()">&times;</button>
-      </div>
-      <div class="chat-panel-body" id="chat-messages">
-        <div class="chat-msg bot">👋 Ask me anything about your work logs!<br/><small>e.g., <em>"What did I work on yesterday?"</em> or <em>"How many hours did I spend on meetings this week?"</em></small></div>
-      </div>
-      <div class="chat-panel-input">
-        <input type="text" class="form-control" id="chat-input" placeholder="Ask about your work logs..." />
-        <button class="btn btn-ai" id="btn-chat-send">➤</button>
-      </div>
-    </section>
-
-    <!-- Table -->
-    <section class="table-container">
-      <div class="table-toolbar">
-        <div class="table-info" id="table-info">Loading...</div>
-        <button class="btn btn-sm btn-ghost" onclick="window.__refreshPage()">🔄 Refresh</button>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th data-sort="source">Source <span class="sort-icon">⇅</span></th>
-              <th data-sort="activity_type">Type <span class="sort-icon">⇅</span></th>
-              <th data-sort="title">Title / Description <span class="sort-icon">⇅</span></th>
-              <th data-sort="project">Project <span class="sort-icon">⇅</span></th>
-              <th data-sort="activity_timestamp">Date <span class="sort-icon">⇅</span></th>
-              <th data-sort="time_spent_minutes">Time <span class="sort-icon">⇅</span></th>
-              <th>External ID</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="logs-tbody">
-            <tr><td colspan="8"><div class="loading"><div class="spinner"></div><p style="margin-top:12px;color:var(--text-muted)">Loading work logs...</p></div></td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="pagination"></div>
-    </section>
-  </main>
-
-  <!-- ═══ Manual Entry Modal ══════════════════════ -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="modal-title">Add Manual Entry</h2>
-        <button class="modal-close" id="btn-close-modal" onclick="closeManualModal()">&times;</button>
-      </div>
-      <form id="manual-form">
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Title <span class="required">*</span></label>
-            <input type="text" class="form-control" id="entry-title" required placeholder="e.g., Sprint planning meeting" />
-          </div>
-          <div class="form-group">
-            <label>Description</label>
-            <textarea class="form-control" id="entry-desc" rows="3" placeholder="Details about this activity..."></textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Activity Type</label>
-              <select class="form-control" id="entry-type">
+      <!-- Filter card -->
+      <div class="card shadow-sm border mb-2">
+        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between" role="button" onclick="toggleFilterPanel()">
+          <span class="fw-semibold fs-sm"><i class="bi bi-funnel me-1"></i> Filters</span>
+          <i class="bi bi-chevron-down" id="filter-toggle" style="transition:transform 0.2s"></i>
+        </div>
+        <div class="card-body" id="filter-body">
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label fs-xs text-muted mb-1">Source</label>
+              <select class="form-select form-select-sm" id="filter-source">
+                <option value="">All</option>
+                <option value="jira">Jira</option>
+                <option value="bitbucket">Bitbucket</option>
+                <option value="github">GitHub</option>
+                <option value="git">Git</option>
+                <option value="manual">Manual</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <label class="form-label fs-xs text-muted mb-1">Type</label>
+              <select class="form-select form-select-sm" id="filter-type">
+                <option value="">All</option>
+                <option value="ticket_update">Ticket Update</option>
+                <option value="comment">Comment</option>
+                <option value="estimation_change">Estimation</option>
+                <option value="status_change">Status</option>
+                <option value="commit">Commit</option>
+                <option value="push">Push</option>
+                <option value="pr_create">PR Create</option>
+                <option value="pr_merge">PR Merge</option>
+                <option value="local_commit">Local Commit</option>
                 <option value="meeting">Meeting</option>
                 <option value="code_review">Code Review</option>
                 <option value="research">Research</option>
                 <option value="other">Other</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Project</label>
-              <input type="text" class="form-control" id="entry-project" placeholder="e.g., PROJ, my-repo" />
+            <div class="col-auto">
+              <label class="form-label fs-xs text-muted mb-1">From</label>
+              <input type="date" class="form-control form-control-sm" id="filter-from" />
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Date &amp; Time</label>
-              <input type="datetime-local" class="form-control" id="entry-date" />
+            <div class="col-auto">
+              <label class="form-label fs-xs text-muted mb-1">To</label>
+              <input type="date" class="form-control form-control-sm" id="filter-to" />
             </div>
-            <div class="form-group">
-              <label>URL (optional)</label>
-              <input type="url" class="form-control" id="entry-url" placeholder="https://..." />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Hours</label>
-              <input type="number" class="form-control" id="entry-hours" min="0" max="24" value="0" />
-            </div>
-            <div class="form-group">
-              <label>Minutes</label>
-              <input type="number" class="form-control" id="entry-minutes" min="0" max="59" value="0" />
+            <div class="col">
+              <label class="form-label fs-xs text-muted mb-1">Search</label>
+              <input type="search" class="form-control form-control-sm" id="filter-search" placeholder="🔍 Search..." />
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="btn-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save">💾 Save</button>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+        <button class="btn btn-primary btn-sm" id="btn-add-manual"><i class="bi bi-plus-lg me-1"></i>Add Entry</button>
+        <button class="btn btn-success btn-sm" id="btn-export"><i class="bi bi-download me-1"></i>Export Excel</button>
+        <span class="text-muted mx-1" style="font-size:12px">|</span>
+        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="jira">Jira</button>
+        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="bitbucket">Bitbucket</button>
+        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="github"><i class="bi bi-github"></i> GitHub</button>
+        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="git">Git</button>
+        <button class="btn btn-sm btn-outline-secondary border-0" data-export-source="manual">Manual</button>
+      </div>
+
+      <!-- AI Panel -->
+      <div class="card shadow-sm border mb-3" id="ai-toolbar" style="display:none">
+        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between" role="button" onclick="toggleAIPanel()">
+          <span class="fw-semibold fs-sm"><i class="bi bi-stars me-1 text-primary"></i> AI Harness</span>
+          <i class="bi bi-chevron-down" id="ai-toggle" style="transition:transform 0.2s"></i>
+        </div>
+        <div class="card-body py-2" id="ai-body">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 me-1">AI Tools</span>
+            <button class="btn btn-outline-primary btn-sm" id="btn-ai-classify" onclick="classifyUnclassified()"><i class="bi bi-magic me-1"></i>Auto-Classify</button>
+            <button class="btn btn-outline-primary btn-sm" id="btn-ai-enhance" onclick="enhanceBatch()"><i class="bi bi-wand me-1"></i>Auto-Enhance</button>
+            <button class="btn btn-outline-primary btn-sm" onclick="openSummaryPanel()"><i class="bi bi-file-text me-1"></i>Summary</button>
+            <button class="btn btn-outline-primary btn-sm" onclick="toggleChatPanel()"><i class="bi bi-chat-dots me-1"></i>Ask AI</button>
+            <a href="/api/settings" target="_blank" class="btn btn-sm btn-outline-secondary border-0 ms-auto"><i class="bi bi-plug"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Panel -->
+      <div class="card shadow-sm border mb-3" id="summary-panel" style="display:none">
+        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
+          <span class="fw-semibold"><i class="bi bi-file-text me-1 text-primary"></i> AI Summary</span>
+          <button class="btn-close" onclick="closeSummaryPanel()"></button>
+        </div>
+        <div class="card-body">
+          <div class="row g-2 mb-2">
+            <div class="col-auto"><label class="form-label fs-xs text-muted mb-1">From</label><input type="date" class="form-control form-control-sm" id="summary-from" /></div>
+            <div class="col-auto"><label class="form-label fs-xs text-muted mb-1">To</label><input type="date" class="form-control form-control-sm" id="summary-to" /></div>
+            <div class="col-auto d-flex align-items-end"><button class="btn btn-primary btn-sm" onclick="generateSummary()"><i class="bi bi-magic me-1"></i>Generate</button></div>
+          </div>
+          <div id="summary-result" class="p-3 bg-light rounded" style="font-size:13px;line-height:1.8;white-space:pre-wrap">
+            <span class="text-muted fst-italic">Select date range and click Generate.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="card shadow-sm border mb-3" id="chat-panel" style="display:none">
+        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
+          <span class="fw-semibold"><i class="bi bi-chat-dots me-1 text-primary"></i> Ask AI</span>
+          <button class="btn-close" onclick="toggleChatPanel()"></button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-msg bot">👋 Ask me anything about your work logs!<br/><small class="text-muted">e.g., <em>"What did I work on yesterday?"</em></small></div>
+        </div>
+        <div class="card-footer bg-white py-2">
+          <div class="input-group input-group-sm">
+            <input type="text" class="form-control" id="chat-input" placeholder="Ask about your work logs..." />
+            <button class="btn btn-primary" id="btn-chat-send"><i class="bi bi-send"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card shadow-sm border">
+        <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
+          <span class="text-muted" id="table-info" style="font-size:13px">Loading...</span>
+          <button class="btn btn-sm btn-outline-secondary border-0" onclick="window.__refreshPage()"><i class="bi bi-arrow-clockwise"></i></button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 align-middle" id="logs-table">
+            <thead>
+              <tr>
+                <th data-sort="source">Source <span class="sort-icon">⇅</span></th>
+                <th data-sort="activity_type">Type <span class="sort-icon">⇅</span></th>
+                <th data-sort="title" style="min-width:200px">Title / Description <span class="sort-icon">⇅</span></th>
+                <th data-sort="project">Project <span class="sort-icon">⇅</span></th>
+                <th data-sort="activity_timestamp">Date <span class="sort-icon">⇅</span></th>
+                <th data-sort="time_spent_minutes">Time <span class="sort-icon">⇅</span></th>
+                <th>External ID</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody">
+              <tr><td colspan="8"><div class="text-center py-5"><div class="spinner-border text-primary mb-2" role="status"></div><p class="text-muted mb-0">Loading work logs...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer bg-white py-2" id="pagination"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ═══ Manual Entry Modal ══════════════════════════ -->
+<div class="modal fade" id="manual-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modal-title">Add Manual Entry</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeManualModal()"></button>
+      </div>
+      <form id="manual-form">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="entry-title" required placeholder="e.g., Sprint planning meeting" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">Description</label>
+            <textarea class="form-control" id="entry-desc" rows="3" placeholder="Details about this activity..."></textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col"><label class="form-label fw-semibold fs-sm">Type</label><select class="form-select" id="entry-type"><option value="meeting">Meeting</option><option value="code_review">Code Review</option><option value="research">Research</option><option value="other">Other</option></select></div>
+            <div class="col"><label class="form-label fw-semibold fs-sm">Project</label><input type="text" class="form-control" id="entry-project" placeholder="e.g., PROJ" /></div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col"><label class="form-label fw-semibold fs-sm">Date &amp; Time</label><input type="datetime-local" class="form-control" id="entry-date" /></div>
+            <div class="col"><label class="form-label fw-semibold fs-sm">URL</label><input type="url" class="form-control" id="entry-url" placeholder="https://..." /></div>
+          </div>
+          <div class="row g-2">
+            <div class="col"><label class="form-label fw-semibold fs-sm">Hours</label><input type="number" class="form-control" id="entry-hours" min="0" max="24" value="0" /></div>
+            <div class="col"><label class="form-label fw-semibold fs-sm">Minutes</label><input type="number" class="form-control" id="entry-minutes" min="0" max="59" value="0" /></div>
+          </div>
+        </div>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-light" id="btn-cancel" onclick="closeManualModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save"><i class="bi bi-save me-1"></i>Save</button>
         </div>
       </form>
     </div>
   </div>
+</div>
 
-  <!-- ═══ AI Settings Modal ═══════════════════════ -->
-  <div class="modal-overlay" id="settings-modal-overlay">
-    <div class="modal modal-lg">
-      <div class="modal-header">
-        <h2>⚙️ AI Harness Settings</h2>
-        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+<!-- ═══ AI Settings Modal ══════════════════════════ -->
+<div class="modal fade" id="settings-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-gear me-1"></i> AI Harness Settings</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeSettingsModal()"></button>
       </div>
       <form id="settings-form">
         <div class="modal-body">
-          <div class="form-group">
-            <label>Enable AI Harness</label>
-            <select class="form-control" id="setting-ai-enabled">
-              <option value="true">✅ Enabled — LLM sẽ xử lý classify / summary / chat</option>
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">Enable AI Harness</label>
+            <select class="form-select" id="setting-ai-enabled">
+              <option value="true">✅ Enabled — LLM xử lý classify / summary / chat</option>
               <option value="false">⛔ Disabled</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>LLM Provider</label>
-            <select class="form-control" id="setting-ai-provider" onchange="onProviderChange()">
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">LLM Provider</label>
+            <select class="form-select" id="setting-ai-provider" onchange="onProviderChange()">
               <option value="openai">OpenAI</option>
-              <option value="gemini">Google Gemini (khuyên dùng)</option>
+              <option value="gemini">Google Gemini</option>
               <option value="anthropic">Anthropic Claude</option>
               <option value="openrouter">OpenRouter</option>
               <option value="deepseek">DeepSeek</option>
               <option value="custom">Custom (OpenAI-compatible)</option>
             </select>
-            <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px">Gemini có free tier. OpenAI và Anthropic require payment.</small>
+            <small class="text-muted" style="font-size:11px">Gemini có free tier.</small>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <div style="display:flex;gap:8px">
-              <input type="password" class="form-control" id="setting-ai-api-key" placeholder="sk-... or AIza... or your key" style="flex:1" />
-              <button type="button" class="btn btn-sm btn-outline" onclick="toggleApiKeyVisibility()" id="btn-toggle-key" title="Show/Hide">👁️</button>
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">API Key</label>
+            <div class="input-group">
+              <input type="password" class="form-control" id="setting-ai-api-key" placeholder="sk-... or AIza..." />
+              <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()" id="btn-toggle-key"><i class="bi bi-eye"></i></button>
             </div>
-            <small id="ai-key-hint" style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px">
-              <a href="https://aistudio.google.com/apikey" target="_blank">Get Gemini API Key</a> (free)
-            </small>
+            <small id="ai-key-hint" class="text-muted" style="font-size:11px"><a href="https://aistudio.google.com/apikey" target="_blank">Get Gemini API Key</a> (free)</small>
           </div>
-          <div class="form-group">
-            <label>Base URL</label>
+          <div class="mb-3">
+            <label class="form-label fw-semibold fs-sm">Base URL</label>
             <input type="url" class="form-control" id="setting-ai-base-url" placeholder="https://api.openai.com/v1" />
           </div>
-          <div class="form-group" style="border-top:1px solid var(--border-light);padding-top:16px">
-            <button type="button" class="btn btn-ai" onclick="testAIConnection()" id="btn-test-ai">🔌 Test Connection &amp; Load Models</button>
-            <span id="ai-test-result" style="margin-left:10px;font-size:13px"></span>
+          <div class="mb-3 pt-2 border-top">
+            <button type="button" class="btn btn-outline-primary" onclick="testAIConnection()" id="btn-test-ai"><i class="bi bi-plug me-1"></i>Test Connection &amp; Load Models</button>
+            <span id="ai-test-result" class="ms-2" style="font-size:13px"></span>
           </div>
-          <div class="form-group" id="model-field-group">
-            <label>Model</label>
+          <div class="mb-3" id="model-field-group">
+            <label class="form-label fw-semibold fs-sm">Model</label>
             <div id="model-input-wrapper">
-              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (Test Connection để load danh sách)" />
+              <input type="text" class="form-control" id="setting-ai-model" placeholder="gpt-4o (Test Connection để load models)" />
             </div>
-            <small id="ai-model-hint" style="color:var(--text-muted);font-size:11px"></small>
+            <small id="ai-model-hint" class="text-muted" style="font-size:11px"></small>
             <div id="model-load-status" style="font-size:12px;margin-top:4px"></div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeSettingsModal()">Close</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-settings">💾 Save Settings</button>
+        <div class="modal-footer border-top-0 pt-0">
+          <button type="button" class="btn btn-light" onclick="closeSettingsModal()">Close</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-settings"><i class="bi bi-save me-1"></i>Save Settings</button>
         </div>
       </form>
     </div>
   </div>
+</div>
 
-  <!-- ═══ Toast Container ══════════════════════════ -->
-  <div class="toast-container" id="toast-container"></div>
+<!-- ═══ Toast Container ══════════════════════════════ -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container" style="z-index:9999"></div>
 
-  <!-- ═══ Loading Overlay ══════════════════════════ -->
-  <div class="loading-overlay" id="loading-overlay">
-    <div class="loading-overlay-content">
-      <div class="spinner"></div>
-      <div class="loading-overlay-text" id="loading-text">Processing...</div>
-    </div>
+<!-- ═══ Loading Overlay ══════════════════════════════ -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="card shadow-lg">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div class="mt-2 fw-semibold" id="loading-text" style="font-size:14px">Processing...</div>
   </div>
+</div>
 
-  <!-- ═══ Scripts ══════════════════════════════════ -->
-  <script src="/static/script.js"></script>
+<!-- Bootstrap JS (for modal) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ═══ App Script ══════════════════════════════════ -->
+<script src="/static/script.js"></script>
 </body>
 </html>
