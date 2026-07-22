@@ -147,7 +147,61 @@ def poll_github() -> None:
                 db.add(log)
                 new_count += 1
 
-        # ─── 2. Pull Requests ─────────────────────────
+        # ─── 2a. Commits từ Search API (fallback) ────────────
+        # Bắt các repo không có PushEvent trong 100 events gần nhất
+        search_commits = _search_commits(username, since, base_api)
+        for commit in search_commits:
+            sha = commit.get("sha", "")
+            if not sha:
+                continue
+
+            repo_full = (
+                (commit.get("repository", {}) or {}).get("full_name", "")
+                or _issue_repo(commit.get("html_url", ""))
+            )
+            if not repo_full or repo_full == "unknown":
+                continue
+
+            msg = (commit.get("commit", {}) or {}).get("message", "")
+            author_name = (commit.get("commit", {}) or {}).get("author", {}) or {}
+            author_name = author_name.get("name", "")
+            committer_date = (commit.get("commit", {}) or {}).get("committer", {}) or {}
+            date_str = committer_date.get("date", "")
+
+            try:
+                ts = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                ts = ts.replace(tzinfo=None)
+            except (ValueError, TypeError):
+                ts = now
+
+            external_id = f"github_commit_{sha}"
+            exists = (
+                db.query(WorkLog)
+                .filter(WorkLog.external_id == external_id)
+                .first()
+            )
+            if exists:
+                continue
+
+            repo_short = repo_full.split("/")[-1]
+            log = WorkLog(
+                source="github",
+                activity_type="commit",
+                title=f"[{repo_short}] {msg[:100]}",
+                description=(
+                    f"Commit by {author_name} | "
+                    f"Repo: {repo_full} | SHA: {sha[:12]}"
+                ),
+                project=repo_full,
+                url=f"https://github.com/{repo_full}/commit/{sha}",
+                activity_timestamp=ts,
+                external_id=external_id,
+                created_at=now,
+            )
+            db.add(log)
+            new_count += 1
+
+        # ─── 3. Pull Requests ─────────────────────────
         prs = _search_issues(username, "pr", since, base_api)
         for pr in prs:
             pr_id = pr.get("number", "")
@@ -198,7 +252,7 @@ def poll_github() -> None:
             db.add(log)
             new_count += 1
 
-        # ─── 3. Issues ────────────────────────────────
+        # ─── 4. Issues ────────────────────────────────
         issues = _search_issues(username, "issue", since, base_api)
         for issue in issues:
             issue_id = issue.get("number", "")
@@ -239,7 +293,7 @@ def poll_github() -> None:
             db.add(log)
             new_count += 1
 
-        # ─── 4. Comments ──────────────────────────────
+        # ─── 5. Comments ──────────────────────────────
         for event in events:
             if event.get("type") not in (
                 "IssueCommentEvent",
@@ -367,6 +421,34 @@ def _search_issues(username: str, issue_type: str, since: str, base_api: str) ->
         return resp.json().get("items", [])
     except httpx.HTTPError as e:
         print(f"[GitHub Poller] Search {issue_type} error: {e}")
+        return []
+
+
+def _search_commits(username: str, since: str, base_api: str) -> list:
+    """Search commits by user via Search API.
+
+    Cần Accept header preview 'claw-graw-preview' để search commits.
+    Fallback khi Events API không có PushEvent cho repo của user.
+    """
+    q = f"author:{username} committer-date:>{since}"
+    headers = _headers()
+    headers["Accept"] = "application/vnd.github.claw-graw-preview+json"
+    try:
+        resp = httpx.get(
+            f"{base_api}/search/commits",
+            headers=headers,
+            params={
+                "q": q,
+                "sort": "committer-date",
+                "order": "desc",
+                "per_page": 50,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+    except httpx.HTTPError as e:
+        print(f"[GitHub Poller] Search commits error: {e}")
         return []
 
 

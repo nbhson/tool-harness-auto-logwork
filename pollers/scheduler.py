@@ -4,10 +4,17 @@ Khi app khởi động, các poller được đăng ký chạy theo interval.
 Chỉ những poller có đủ cấu hình mới được kích hoạt.
 """
 
+from datetime import datetime, timezone
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from config import config
 
 scheduler: BackgroundScheduler = BackgroundScheduler(daemon=True)
+
+
+def _now() -> datetime:
+    """Trả về thời gian UTC hiện tại (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 def start_scheduler() -> None:
@@ -25,6 +32,7 @@ def start_scheduler() -> None:
             minutes=config.JIRA_POLL_INTERVAL,
             id="jira_poller",
             replace_existing=True,
+            next_run_time=_now(),
             name="Jira Activity Poller",
         )
         print(
@@ -45,6 +53,7 @@ def start_scheduler() -> None:
             minutes=config.BITBUCKET_POLL_INTERVAL,
             id="bitbucket_poller",
             replace_existing=True,
+            next_run_time=_now(),
             name="Bitbucket Activity Poller",
         )
         print(
@@ -61,6 +70,7 @@ def start_scheduler() -> None:
             minutes=config.GITHUB_POLL_INTERVAL,
             id="github_poller",
             replace_existing=True,
+            next_run_time=_now(),
             name="GitHub Activity Poller",
         )
         print(
@@ -76,6 +86,7 @@ def start_scheduler() -> None:
         minutes=2,
         id="git_hook_reader",
         replace_existing=True,
+        next_run_time=_now(),
         name="Git Hook Reader",
     )
     print("  ✓ Git hook reader enabled — every 2 min")

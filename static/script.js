@@ -942,6 +942,36 @@
     });
   }
 
+  // ─── Poll Now ───────────────────────────────────────
+
+  async function triggerPoll() {
+    const btn = document.getElementById("btn-poll-now");
+    if (!btn) return;
+
+    const origHTML = btn.innerHTML;
+    const origDisabled = btn.disabled;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Polling...';
+    btn.classList.add("btn-loading");
+
+    try {
+      const res = await fetch("/api/poll", { method: "POST" });
+      const data = await res.json();
+      if (data.status === "ok") {
+        showToast("🔄 Poll completed — " + data.message, "success");
+      } else {
+        showToast("❌ Poll failed", "error");
+      }
+      await loadData();
+    } catch (err) {
+      showToast(`❌ Poll error: ${err.message}`, "error");
+    } finally {
+      btn.disabled = origDisabled;
+      btn.innerHTML = origHTML;
+      btn.classList.remove("btn-loading");
+    }
+  }
+
   // ─── Filter handlers ───────────────────────────────
 
   function applyFilters() {
@@ -1009,6 +1039,7 @@
   window.sendChatMessage = sendChatMessage;
   window.toggleFilterPanel = toggleFilterPanel;
   window.toggleAIPanel = toggleAIPanel;
+  window.triggerPoll = triggerPoll;
 
   // ─── Init ──────────────────────────────────────────
 

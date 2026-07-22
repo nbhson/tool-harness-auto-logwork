@@ -73,12 +73,14 @@ from routers import logs as logs_router
 from routers import export as export_router
 from routers import settings as settings_router
 from routers import ai as ai_router
+from routers import poll as poll_router
 
 app.include_router(web_router.router)
 app.include_router(logs_router.router)
 app.include_router(export_router.router)
 app.include_router(settings_router.router)
 app.include_router(ai_router.router)
+app.include_router(poll_router.router)
 
 
 # ─── Entry point ──────────────────────────────────────
