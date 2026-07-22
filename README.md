@@ -266,16 +266,29 @@ tool-auto-logwork/
 ### Yêu cầu
 
 - **Python 3.12+**
-- **pip**
 
 ### Quick start
 
 ```bash
 cd tool-auto-logwork
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 cp .env.example .env
 python app.py
 ```
+
+### Các cách cài dependencies khác
+
+Nếu `python3 -m pip` không phù hợp, bạn có thể dùng một trong các cách sau:
+
+| Cách | Lệnh | Ghi chú |
+|------|------|---------|
+| **pip** (Python built-in) | `pip install -r requirements.txt` | macOS có thể không có `pip`, dùng `python3 -m pip` hoặc `pip3` |
+| **pip3** | `pip3 install -r requirements.txt` | Tương tự pip, dành cho Python 3 |
+| **uv** (nhanh hơn 10-100x) | `uv pip install -r requirements.txt` | Cài uv: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **pipenv** | `pipenv install` | Tự động tạo virtualenv |
+| **poetry** | `poetry install` | Nếu có sẵn `pyproject.toml` |
+| **Conda** | `conda install --file requirements.txt` | Nếu dùng Anaconda / Miniconda |
+| **Virtual env** (khuyên dùng) | `python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` | Cô lập dependencies, tránh xung đột |
 
 Mở **[http://localhost:8765](http://localhost:8765)**
 
