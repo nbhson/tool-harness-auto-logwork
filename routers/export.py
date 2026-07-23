@@ -74,15 +74,23 @@ def _build_workbook(source_filter: Optional[str]) -> io.BytesIO:
         cell.border = THIN_BORDER
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-    # ─── Data ─────────────────────────────────────────
+    # ─── Data & Summary (1 session duy nhất) ─────────
     db = get_db()
     try:
         session: Session = next(db)
+
+        # Build query (có hoặc không filter)
         q = session.query(WorkLog).order_by(WorkLog.activity_timestamp.desc())
         if source_filter:
             q = q.filter(WorkLog.source == source_filter)
 
-        for row_idx, log in enumerate(q.all(), 2):
+        # Dùng cùng query cho cả data rows và summary
+        all_logs = q.all()
+        total_time = sum(log.time_spent_minutes or 0 for log in all_logs)
+        total = len(all_logs)
+
+        # ─── Data rows ────────────────────────────────
+        for row_idx, log in enumerate(all_logs, 2):
             source_fill = SOURCE_COLORS.get(log.source)
 
             values = [
@@ -112,42 +120,31 @@ def _build_workbook(source_filter: Optional[str]) -> io.BytesIO:
         ws.freeze_panes = "A2"
         ws.auto_filter.ref = ws.dimensions
 
-    finally:
-        db.close()
+        # ─── Summary sheet (dùng cùng source_filter) ──
+        ws2 = wb.create_sheet("Summary")
+        summary_headers = ["Metric", "Value"]
+        for col_idx, h in enumerate(summary_headers, 1):
+            cell = ws2.cell(row=1, column=col_idx, value=h)
+            cell.font = HEADER_FONT
+            cell.fill = HEADER_FILL
+            cell.border = THIN_BORDER
+        ws2.column_dimensions["A"].width = 25
+        ws2.column_dimensions["B"].width = 15
 
-    # ─── Summary sheet ────────────────────────────────
-    ws2 = wb.create_sheet("Summary")
-    summary_headers = ["Metric", "Value"]
-    for col_idx, h in enumerate(summary_headers, 1):
-        cell = ws2.cell(row=1, column=col_idx, value=h)
-        cell.font = HEADER_FONT
-        cell.fill = HEADER_FILL
-        cell.border = THIN_BORDER
-    ws2.column_dimensions["A"].width = 25
-    ws2.column_dimensions["B"].width = 15
-
-    # Đọc lại để tính summary
-    db2 = get_db()
-    try:
-        session2: Session = next(db2)
-        total = session2.query(WorkLog).count()
-        total_time = sum(
-            row[0] or 0
-            for row in session2.query(WorkLog.time_spent_minutes).all()
-        )
-        jira = session2.query(WorkLog).filter(WorkLog.source == "jira").count()
-        bitbucket = session2.query(WorkLog).filter(WorkLog.source == "bitbucket").count()
-        git = session2.query(WorkLog).filter(WorkLog.source == "git").count()
-        manual = session2.query(WorkLog).filter(WorkLog.source == "manual").count()
+        # Đếm theo source (dựa trên dữ liệu đã filter)
+        counts = {}
+        for log in all_logs:
+            counts[log.source] = counts.get(log.source, 0) + 1
 
         summary_data = [
             ("Total Logs", total),
             ("Total Time (hours)", round(total_time / 60, 1)),
             ("Total Time (minutes)", total_time),
-            ("Jira Activities", jira),
-            ("Bitbucket Activities", bitbucket),
-            ("Git Commits", git),
-            ("Manual Entries", manual),
+            ("Jira Activities", counts.get("jira", 0)),
+            ("Bitbucket Activities", counts.get("bitbucket", 0)),
+            ("GitHub Activities", counts.get("github", 0)),
+            ("Git Commits", counts.get("git", 0)),
+            ("Manual Entries", counts.get("manual", 0)),
         ]
 
         for row_idx, (metric, value) in enumerate(summary_data, 2):
@@ -157,7 +154,7 @@ def _build_workbook(source_filter: Optional[str]) -> io.BytesIO:
             ws2.cell(row=row_idx, column=2).border = THIN_BORDER
 
     finally:
-        db2.close()
+        db.close()
 
     output = io.BytesIO()
     wb.save(output)
